@@ -1,6 +1,6 @@
-# WebRateLimiter. -- based off of the example provided by Chris Mague here: 
+# WebRateLimiter. -- based off of the python example provided by Chris Mague here: 
 https://github.com/Redislabs-Solution-Architects/RateLimitingExample/tree/sliding_window
-# chris also makes his example available here:
+# chris also makes his python example available here:
 https://github.com/maguec/RateLimitingExample/tree/sliding_window
 
 A simple Java code example of limiting number of requests to a webserver using Redis SortedSets API
