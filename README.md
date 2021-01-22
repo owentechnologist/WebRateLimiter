@@ -1,5 +1,7 @@
 # WebRateLimiter. -- based off of the example provided by Chris Mague here: 
 https://github.com/Redislabs-Solution-Architects/RateLimitingExample/tree/sliding_window
+# chris also makes his example available here:
+https://github.com/maguec/RateLimitingExample/tree/sliding_window
 
 A simple Java code example of limiting number of requests to a webserver using Redis SortedSets API
 
@@ -9,7 +11,8 @@ to use:
 
 * build the project in an environment supporting Maven (getting the jars manually is a pain)
 * edit the jedisconnectionfactory.properties file to match your Redis Server details
-* run the Application 
+* run the Application providing the path to the jedisconnectionfactory.properties file as an argument to Main
+Example: com.redislabs.sa.ot.Main /Users/owentaylor/IdeaProjects/WebRateLimiter/src
 
 From a browser use http://[host]:4567?accountKey=[yourKey]
 

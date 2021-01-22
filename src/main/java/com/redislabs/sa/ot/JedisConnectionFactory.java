@@ -24,13 +24,12 @@ public class JedisConnectionFactory {
     private HostAndPort hostAndPort;
 
     public JedisConnectionFactory() {
-        String host = "localhost";
-        String port = "6379";
         config = com.redislabs.sa.ot.PropertyFileFetcher.loadProps("jedisconnectionfactory.properties");
         if(null == config){
+            System.out.println("\t[JedisConnectionFactory] USING HARD-CODED CONFIGURATION ... properties files not loaded...");
             config = new Properties();
-            config.put(hostPropertyName,host);
-            config.put(portPropertyName,port);
+            config.put(hostPropertyName,"localhost");
+            config.put(portPropertyName,"6379");
             config.put(userPropertyName,"default");
             config.put(passwordPropertyName,"");
             config.put(timeoutPropertyName,"15000");
@@ -39,8 +38,8 @@ public class JedisConnectionFactory {
             config.put(maxTotalPropertyName,"8");
             config.put(maxWaitPropertyName,"5000");
         }
-        host = (String) config.get(hostPropertyName);
-        port = (String) config.get(portPropertyName);
+        String host = (String) config.get(hostPropertyName);
+        String port = (String) config.get(portPropertyName);
         hostAndPort = new HostAndPort(host,Integer.parseInt(port) );
         initPool(hostAndPort);
     }
