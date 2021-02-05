@@ -1,7 +1,6 @@
 package com.redislabs.sa.ot;
 
 import redis.clients.jedis.HostAndPort;
-import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 
@@ -85,43 +84,33 @@ public class JedisConnectionFactory {
         return poolConf;
     }
 
-    private void initPool(HostAndPort hostAndPort){
-        jedisPool = new JedisPool(initPoolConfig(),hostAndPort.getHost(),hostAndPort.getPort());
-    }
+    private void initPool(HostAndPort hostAndPort) {
 
-    public Jedis getJedisConnectionFromPool(){
-        System.out.println(this.getClass()+"  getJedisConnectionFromPool() called");
-        Jedis connection = null;
-        try {
-            connection = jedisPool.getResource();
-            authenticate(connection);
-            assignJedisTimeout(connection);
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
-        return connection;
-    }
-
-    private void assignJedisTimeout(Jedis connection){
-        try {
-            if (config.get(timeoutPropertyName).toString().length() > 0) {
-                connection.configSet("timeout", config.getProperty(timeoutPropertyName));
+        String user, password;
+        password = config.get(passwordPropertyName).toString();
+        if (password.isEmpty()) {
+            user = null;
+            password = null;
+        } else {
+            user = config.getProperty(userPropertyName);
+            if (user.isEmpty()) {
+                user = null;
             }
-        }catch(Throwable t){
-            System.out.println("Issue with setting timeout - does the property "+timeoutPropertyName+" exist?");
-            t.printStackTrace();
         }
+
+        String timeoutStr = config.get(timeoutPropertyName).toString();
+        int timeout;
+        if (!timeoutStr.isEmpty()) {
+            timeout = Integer.parseInt(timeoutStr);
+        } else {
+            timeout = redis.clients.jedis.Protocol.DEFAULT_TIMEOUT;
+        }
+
+        jedisPool = new JedisPool(initPoolConfig(), hostAndPort.getHost(), hostAndPort.getPort(), timeout, user, password);
     }
 
-    private void authenticate(Jedis connection){
-        try{
-            if(config.get(passwordPropertyName).toString().length()>0){
-                connection.auth(config.getProperty(userPropertyName),config.getProperty(passwordPropertyName));
-            }
-        }catch(Throwable t){
-            System.out.println("Issue with setting user and password - does the property "+passwordPropertyName+" exist?");
-            t.printStackTrace();
-        }
+    public JedisPool getJedisPool(){
+        return jedisPool;
     }
 
     public static JedisConnectionFactory getInstance() {
