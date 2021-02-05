@@ -1,23 +1,27 @@
 package com.redislabs.sa.ot;
 import static spark.Spark.*;
 
-import redis.clients.jedis.*;
-
-import java.util.Set;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 //NB: this class uses SparkJava -a simple embedded web server
 //Documentation for SparkJava can be found here:
 // https://sparkjava.com/documentation
 
 public class WebRateLimitService {
+
     int ratePerMinuteAllowed = 4;
     int ratePerHourAllowed = 25;
-    Jedis connection = null;
+    private final JedisPool jedisPool;
 
     private static WebRateLimitService instance = new WebRateLimitService();
 
     public static WebRateLimitService getInstance(){
         return instance;
+    }
+
+    private WebRateLimitService() {
+        jedisPool = JedisConnectionFactory.getInstance().getJedisPool();
     }
 
     private static void restartWebRateLimitService(){
@@ -86,24 +90,34 @@ public class WebRateLimitService {
     }
 
     private void updateExpiryTimes(RateLimitRecord val){
-        getConnection().expire(val.getMinuteLimitKey(),60);
-        getConnection().expire(val.getHourLimitKey(),3600);
+        try (Jedis connection = jedisPool.getResource()) {
+            connection.expire(val.getMinuteLimitKey(),60);
+        }
+        try (Jedis connection = jedisPool.getResource()) {
+            connection.expire(val.getHourLimitKey(),3600);
+        }
     }
 
     private int countRequestsThisMinute(RateLimitRecord val){
-        Set<String> minuteSet =  getConnection().zrange(val.getMinuteLimitKey(), 0,-1);
-        return minuteSet.size();
+        try (Jedis connection = jedisPool.getResource()) {
+            return connection.zcard(val.getMinuteLimitKey()).intValue();
+        }
     }
 
     private int countRequestsThisHour(RateLimitRecord val){
-        Set<String> hourSet = getConnection().zrange(val.getHourLimitKey(), 0,-1);
-        return hourSet.size();
+        try (Jedis connection = jedisPool.getResource()) {
+            return connection.zcard(val.getHourLimitKey()).intValue();
+        }
     }
 
     private void storeCurrentRequest(RateLimitRecord val){
         //There will always be one new request
-        getConnection().zadd(val.getMinuteLimitKey(), val.getCurrentTimeArg(), val.getMinuteLimitKey()+":"+val.getCurrentTimeFormatted());
-        getConnection().zadd(val.getHourLimitKey(), val.getCurrentTimeArg(), val.getHourLimitKey()+":"+val.getCurrentTimeFormatted());
+        try (Jedis connection = jedisPool.getResource()) {
+            connection.zadd(val.getMinuteLimitKey(), val.getCurrentTimeArg(), val.getMinuteLimitKey() + ":" + val.getCurrentTimeFormatted());
+        }
+        try (Jedis connection = jedisPool.getResource()) {
+            connection.zadd(val.getHourLimitKey(), val.getCurrentTimeArg(), val.getHourLimitKey() + ":" + val.getCurrentTimeFormatted());
+        }
     }
 
     private void removeOldKeysByTime(RateLimitRecord val){
@@ -112,21 +126,14 @@ public class WebRateLimitService {
         //this creates a rolling window where only those scores with times greater than 1 time factor ago will
         //remain in Redis
 
-        long countDeletedInMinuteKey = getConnection().zremrangeByScore(val.getMinuteLimitKey(),0,val.getLastMinute());
-        long countDeletedInHourKey = getConnection().zremrangeByScore(val.getHourLimitKey(),0,val.getLastHour());
-        System.out.println("\tDeleted "+countDeletedInMinuteKey+" scores from "+val.getMinuteLimitKey());
-        System.out.println("\tDeleted "+countDeletedInHourKey+" scores from "+val.getHourLimitKey());
-    }
-
-    private Jedis getConnection(){
-        if(null == connection) {
-            connection = JedisConnectionFactory.getInstance().getJedisConnectionFromPool();
-            if(connection.ping().length()<2){
-                restartWebRateLimitService(); // this is designed to allow connections again after
-                // a 500 InternalServer Error
-            }
+        try (Jedis connection = jedisPool.getResource()) {
+            long countDeletedInMinuteKey = connection.zremrangeByScore(val.getMinuteLimitKey(), 0, val.getLastMinute());
+            System.out.println("\tDeleted " + countDeletedInMinuteKey + " scores from " + val.getMinuteLimitKey());
         }
-        return this.connection;
+        try (Jedis connection = jedisPool.getResource()) {
+            long countDeletedInHourKey = connection.zremrangeByScore(val.getHourLimitKey(), 0, val.getLastHour());
+            System.out.println("\tDeleted " + countDeletedInHourKey + " scores from " + val.getHourLimitKey());
+        }
     }
 
 }
