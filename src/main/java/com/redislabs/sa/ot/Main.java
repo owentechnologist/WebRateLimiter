@@ -1,5 +1,7 @@
 package com.redislabs.sa.ot;
 
+import com.redislabs.sa.ot.util.PropertyFileFetcher;
+
 public class Main {
 
     public static void main(String[] args) {

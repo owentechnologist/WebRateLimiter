@@ -1,4 +1,4 @@
-package com.redislabs.sa.ot;
+package com.redislabs.sa.ot.util;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;

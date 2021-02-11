@@ -1,4 +1,4 @@
-package com.redislabs.sa.ot;
+package com.redislabs.sa.ot.util;
 
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisPool;
@@ -23,7 +23,7 @@ public class JedisConnectionFactory {
     private HostAndPort hostAndPort;
 
     public JedisConnectionFactory() {
-        config = com.redislabs.sa.ot.PropertyFileFetcher.loadProps("jedisconnectionfactory.properties");
+        config = PropertyFileFetcher.loadProps("jedisconnectionfactory.properties");
         if(null == config){
             System.out.println("\t[JedisConnectionFactory] USING HARD-CODED CONFIGURATION ... properties files not loaded...");
             config = new Properties();

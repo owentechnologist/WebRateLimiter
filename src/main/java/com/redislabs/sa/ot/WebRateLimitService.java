@@ -1,6 +1,7 @@
 package com.redislabs.sa.ot;
 import static spark.Spark.*;
 
+import com.redislabs.sa.ot.util.JedisConnectionFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
