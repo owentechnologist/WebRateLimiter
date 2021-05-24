@@ -1,8 +1,6 @@
-package com.redislabs.sa.ot;
+package com.redislabs.sa.ot.webRateLimiter;
 
 import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
 
 public class RateLimitRecord {
 
@@ -12,6 +10,7 @@ public class RateLimitRecord {
     private String hourLimitKey = null;
     private long currentTimeArg = System.currentTimeMillis();
     private String rateLimitKeyBase = null;
+    private String uniqueRequestKey = "";
     private String message = "You should never see this message like this!";
 
     public RateLimitRecord(String rateLimitKey) {
@@ -19,7 +18,6 @@ public class RateLimitRecord {
         hourLimitKey = rateLimitKey + ":hour";
         rateLimitKeyBase = rateLimitKey;
     }
-
     public String getRateLimitKeyBase(){return this.rateLimitKeyBase;}
     public String getMinuteLimitKey(){return this.minuteLimitKey;}
     public String getHourLimitKey(){return this.hourLimitKey;}

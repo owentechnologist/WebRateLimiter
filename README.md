@@ -11,8 +11,9 @@ to use:
 
 * build the project in an environment supporting Maven (getting the jars manually is a pain)
 * edit the jedisconnectionfactory.properties file to match your Redis Server details
-* run the Application providing the path to the jedisconnectionfactory.properties file as an argument to Main
-Example: com.redislabs.sa.ot.Main /Users/owentaylor/IdeaProjects/WebRateLimiter/src
+* run the Application The Properties file should be available to the java runtime classloader 
+** - but if that doesn't work--> (provide the path to the jedisconnectionfactory.properties file as an argument to Main
+Example: com.redislabs.sa.ot.webRateLimiter.Main /Users/owentaylor/IdeaProjects/WebRateLimiter/src )
 
 From a browser use http://[host]:4567?accountKey=[yourKey]
 
@@ -20,11 +21,11 @@ Example ...  http://127.0.0.1:4567?accountKey=007
 
 The response will show how many requests have been made in the last minute and last hour.
 
-Each accountKey coming from a particular IP address is allowed 4 requests/minute and 25 requests/hour
+Each accountKey coming from a particular IP address is allowed 3 requests/minute and 25 requests/hour
 
 These limits are defined in WebRateLimitService.java:
 
-    int ratePerMinuteAllowed = 4;
+    int ratePerMinuteAllowed = 3;
     int ratePerHourAllowed = 25;
 
 Hit the webserver a few times with your request to see the reponse change from a friendly welcome to a friendly -- too many requests.
@@ -36,7 +37,7 @@ To see what is happening in Redis you can use RedisInsight   https://redislabs.c
 
 or redis-cli:
 
-127.0.0.1:6379> keys *
+127.0.0.1:6379> keys z:*
 1) "z:rateLimiting:127.0.0.1:GET:accountKey=008:minute"
 2) "z:rateLimiting:127.0.0.1:GET:accountKey=008:hour"
 

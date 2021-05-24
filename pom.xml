@@ -31,6 +31,12 @@
             <artifactId>jedis</artifactId>
             <version>3.4.1</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.redislabs</groupId>
+            <artifactId>jredistimeseries</artifactId>
+            <version>1.4.0</version>
+        </dependency>
     </dependencies>
 
     <properties>

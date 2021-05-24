@@ -1,4 +1,4 @@
-package com.redislabs.sa.ot;
+package com.redislabs.sa.ot.webRateLimiter;
 
 import com.redislabs.sa.ot.util.PropertyFileFetcher;
 
