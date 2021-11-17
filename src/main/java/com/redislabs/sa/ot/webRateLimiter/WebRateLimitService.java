@@ -1,14 +1,20 @@
 package com.redislabs.sa.ot.webRateLimiter;
+import static com.redislabs.sa.ot.demoservices.Main.jedisPool;
+import static com.redislabs.sa.ot.demoservices.SharedConstants.*;
 import static spark.Spark.*;
 
 import com.redislabs.sa.ot.util.JedisConnectionFactory;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.StreamEntry;
+import redis.clients.jedis.StreamEntryID;
 import redis.clients.jedis.params.SetParams;
 import spark.Request;
 
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 //NB: this class uses SparkJava -a simple embedded web server
@@ -29,8 +35,6 @@ public class WebRateLimitService {
 
     int ratePerMinuteAllowed = 3;
     int ratePerHourAllowed = 25;
-    private static JedisPool jedisPool;
-    private static String GARBAGE_CITY_STREAM_NAME="X:GBG:CITY";
 
     private static WebRateLimitService instance = new WebRateLimitService();
     public static WebRateLimitService getInstance(){ return instance; }
@@ -69,7 +73,7 @@ public class WebRateLimitService {
                     isIdentified = true;
                     if (instance.isRateOfAccessTooHighForContract(record)) {
                         System.out.println("Too Many requests!");
-                        halt(429, "" + record.getMessage());
+                        halt(429, "" + (record.getMessage()+getLinks()));
                     }
                 }
                 if (!isIdentified) {
@@ -81,15 +85,51 @@ public class WebRateLimitService {
 
         get("/", (req, res) -> WebRateLimitService.getResponseForRootPath(req));
 
-        get("/correct-city-spelling", (req, res) -> getResponseForCorrectCitySpellPath(req));
-    }
+        get("/correct-city-spelling", (req, res) -> (getResponseForCorrectCitySpellPath(req))+getLinks());
 
+        get("/cleaned-submissions", (req, res) -> (getResponseForCleanedSubmissions(req))+getLinks());
+
+    }
 
     static String getResponseForCorrectCitySpellPath(Request req) {
         String val = "</h1>Thank you for your submission</h1>" +
-                "" + instance.submitCity(req.queryParams("uniqueRequestKey"), req.queryParams("city")) + "<p />" +
-                "<p /><a href=\"http://127.0.0.1:4567?accountKey=007\">RequestAnother?</a>";
+                "" + instance.submitCity(req.queryParams("uniqueRequestKey"), req.queryParams("city")) + "<p />";
         return val;
+    }
+
+    static String getLinks(){
+        return
+                "<p /><a href=\"http://localhost:4567?accountKey=007\">RequestAnother?</a>"+
+                "<p /><a href=\"http://localhost:4567/cleaned-submissions?accountKey=007\">See all Submissions?</a>";
+    }
+
+    static String getResponseForCleanedSubmissions(Request req){
+        String response = "<p /><h3>Here are the CityNames that have been submitted and cleaned up by this service: <p /> <ol>";
+        try (Jedis jedis = jedisPool.getResource()) {
+            try {
+                StreamEntryID start = new StreamEntryID("0-0");
+                StreamEntryID end = new StreamEntryID(System.currentTimeMillis(),0l);
+                List<StreamEntry> x = jedis.xrange(BEST_MATCHED_CITY_NAMES_STREAM_NAME, start, end, 10);
+                if (null != x) {
+                    if(x.size()<1){
+                        x = jedis.xrange(GARBAGE_CITY_STREAM_NAME, start, end, 10);
+                        response += "<h2>No entries have been processed yet</h2><p />"+
+                                x.size()+" Entries have been submitted for processing:<p />";
+                    }
+                    Iterator i = x.iterator();
+                    while (i.hasNext()) {
+                        response += "<li />";
+                        response += ((StreamEntry) i.next()).toString();
+                    }
+                }
+            } catch (Throwable t) {
+                response += t.getMessage() + "<li />";
+                response += t.getCause().getMessage() + "<li />";
+                t.printStackTrace();
+            }
+        }
+        response+="</ol></h3>";
+        return response;
     }
 
         static String getResponseForRootPath(Request req){

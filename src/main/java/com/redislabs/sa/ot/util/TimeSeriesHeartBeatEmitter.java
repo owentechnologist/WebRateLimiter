@@ -9,7 +9,7 @@ import java.util.Map;
 /**
      * The following requires the presence of an active Redis TimeSeries module:
     Use commands like these to see what is being posted to the timeseries:
-    TS.MRANGE - + AGGREGATION avg 2 FILTER measure=heartbeat
+    TS.MRANGE - + AGGREGATION avg 60 FILTER measure=heartbeat
     TS.MGET WITHLABELS FILTER measure=heartbeat
 */
 public class TimeSeriesHeartBeatEmitter {
@@ -23,10 +23,14 @@ public class TimeSeriesHeartBeatEmitter {
         labels.put("measure","heartbeat");
         String keyName = "TS:"+serviceName;
         try{
-            timeSeries.create(keyName, 60 * 3600, labels);
+            timeSeries.create(keyName, 24 * 2 * 3600, labels);
         }catch(Throwable t){
-            t.printStackTrace();
-            timeSeries.alter(keyName, 60 * 3600, labels);
+            if(t.getMessage().equalsIgnoreCase("ERR TSDB: key already exists")){
+                timeSeries.alter(keyName, 24 * 2 * 3600, labels);
+            }
+            else {
+                t.printStackTrace();
+            }
         }
         startHeartBeat(timeSeries,keyName);
         System.out.println("startHeartBeat(keyName);" +keyName);
@@ -46,7 +50,8 @@ public class TimeSeriesHeartBeatEmitter {
                             secondsWithoutIncident =0;
                             t.printStackTrace();
                         }
-                        Thread.sleep(1000);
+                        Thread.sleep(10000);
+                        secondsWithoutIncident = secondsWithoutIncident+10;
                     }
                 } catch (Throwable t) {
                     t.printStackTrace();

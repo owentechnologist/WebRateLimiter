@@ -3,17 +3,33 @@ https://github.com/Redislabs-Solution-Architects/RateLimitingExample/tree/slidin
 # chris also makes his python example available here:
 https://github.com/maguec/RateLimitingExample/tree/sliding_window
 
-A simple Java code example of limiting number of requests to a webserver using Redis SortedSets API
+A Java code example of limiting number of requests to a webserver using Redis SortedSets API
 
 This example embeds a Java webserver ( https://sparkjava.com/documentation ) 
 
-to use: 
+This web-app is part of a larger services demo involving a deduper and a search lookup
 
+The premise of the overall demo is - spell check / cleanse submitted city names.
+
+The various services are connected asynchronously through redis streams.
+
+They all emit a heartbeat to redis TimeSeries every 10 seconds to show they are healthy.
+
+One service loads the redis database with Hashes containing Canadian city names and a nod to NY.
+It also creates the search index so that others can search for citynames.
+
+Another dedups the entries made by users so the spellchecking/lookup/search effort is done only one time for each unique entry. 
+
+The last service does the search lookup using phonetic and fuzzy matching to grab the closest match and writes the best match to a stream.
+
+To run the example:
 * build the project in an environment supporting Maven (getting the jars manually is a pain)
 * edit the jedisconnectionfactory.properties file to match your Redis Server details
-* run the Application The Properties file should be available to the java runtime classloader 
-** - but if that doesn't work--> (provide the path to the jedisconnectionfactory.properties file as an argument to Main
-Example: com.redislabs.sa.ot.webRateLimiter.Main /Users/owentaylor/IdeaProjects/WebRateLimiter/src )
+  (make sure your redis instance supports the TimeSeries, Search, and Blooom modules)
+
+```
+mvn compile exec:java
+```
 
 From a browser use http://[host]:4567?accountKey=[yourKey]
 
@@ -28,13 +44,17 @@ These limits are defined in WebRateLimitService.java:
     int ratePerMinuteAllowed = 3;
     int ratePerHourAllowed = 25;
 
-Hit the webserver a few times with your request to see the reponse change from a friendly welcome to a friendly -- too many requests.
+Hit the webserver a few times with requests with the same accountKey to see the response change from a friendly welcome to a friendly -- too many requests.
 
 Due to the use of zremrangeByScore and the score being equal to the time the request occurred, the application does a good job 
 of providing a sliding window of allowed requests.
 
-To see what is happening in Redis you can use RedisInsight   https://redislabs.com/redis-enterprise/redis-insight/
+Each request made through the web-UI results in an entry being added to a redis stream that will be processed by various services. 
 
+
+To see what is happening in Redis you can use RedisInsight   https://redislabs.com/redis-enterprise/redis-insight/
+(look at the streams section to see entries being added to the streams)
+(look at the SortedSets to see what rate-limiting data is being processed there)
 or redis-cli:
 
 127.0.0.1:6379> keys z:*

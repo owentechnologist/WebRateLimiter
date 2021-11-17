@@ -14,6 +14,7 @@ public class PropertyFileFetcher {
         boolean foundPathToPropertyFile = false;
         Properties p=null;
         InputStream inputStream = null;
+        /*
         try{
             System.out.println("LOADING PROPERTIES FILE: "+propertyFileName+" USING FileInputStream and this path: "+pathToPropertiesFile+System.getProperty("file.separator")+propertyFileName);
             inputStream = new FileInputStream(pathToPropertiesFile+System.getProperty("file.separator")+propertyFileName);
@@ -21,6 +22,7 @@ public class PropertyFileFetcher {
         }catch(FileNotFoundException t){
             t.printStackTrace();
         }
+        */
         if(!foundPathToPropertyFile){
             System.out.println("LOADING PROPERTIES FILE: "+propertyFileName+" USING CLASSLOADER...");
             inputStream = PropertyFileFetcher.class.getClassLoader().getResourceAsStream(propertyFileName);
