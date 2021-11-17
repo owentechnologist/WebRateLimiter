@@ -7,7 +7,12 @@ A Java code example of limiting number of requests to a webserver using Redis So
 
 This example embeds a Java webserver ( https://sparkjava.com/documentation ) 
 
-This web-app is part of a larger services demo involving a deduper and a search lookup
+This web-app is part of a larger services demo involving a deduper and a search lookup.
+
+
+![UI](multimodalRedis.png)
+
+![services](multimodalServices.png)
 
 The premise of the overall demo is - spell check / cleanse submitted city names.
 
