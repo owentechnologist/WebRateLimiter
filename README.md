@@ -19,6 +19,9 @@ This example embeds a Java webserver ( https://sparkjava.com/documentation )
 
 The premise of the overall demo is - spell check / cleanse submitted city names.
 
+City address data is loaded from a csv file populated with data from a free data set provided by: https://simplemaps.com/
+
+
 The various services are connected asynchronously through redis streams.
 
 They all emit a heartbeat to redis TimeSeries every 10 seconds to show they are healthy.
