@@ -47,18 +47,6 @@ class CityNameDeduper implements StreamEventMapProcessor {
 
     public  CityNameDeduper(){
     }
-/*
-    public  void processMap(Map<String, String> map){
-        System.out.println(map.get(map.keySet().toArray()[0]));
-        String payload = map.get(map.keySet().toArray()[0]);
-
-        if(shouldAdd(valuesForDedup(payload).get("cityName")))
-            try{
-                System.out.println("CityNameDeduper.processMap(): "+payload);
-                DedupMain.connection.xadd(DedupMain.dedupedCityNameRequests,null,valuesForDedup(payload));
-            }catch(Throwable t){t.printStackTrace();}
-    }
-    */
 
     public Map<String,String> valuesForDedup(String payload){
         String payload1 = payload.split(",")[0];
@@ -86,7 +74,6 @@ class CityNameDeduper implements StreamEventMapProcessor {
     }
 
     public boolean shouldAdd(String cityName){
-        System.out.println("CityNameDeduper.processMap().shouldAdd("+cityName+")"+ jedisPool );
         boolean shouldAdd = true;
         try {
             if(DedupMain.cfClient.cfExists(DedupMain.cfIndexName,cityName)){
@@ -98,6 +85,7 @@ class CityNameDeduper implements StreamEventMapProcessor {
             t.printStackTrace();
             shouldAdd=false;
         }
+        System.out.println("CityNameDeduper.processMap().shouldAdd("+cityName+")"+ jedisPool + "  --> "+shouldAdd);
         return shouldAdd;
     }
 

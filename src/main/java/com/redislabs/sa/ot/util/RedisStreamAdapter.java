@@ -4,6 +4,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.StreamEntry;
 import redis.clients.jedis.StreamEntryID;
+import redis.clients.jedis.StreamEntryID.*;
 import redis.clients.jedis.exceptions.JedisDataException;
 
 import java.util.AbstractMap;
@@ -83,23 +84,26 @@ public class RedisStreamAdapter {
                         String key = "";
                         List<StreamEntry> streamEntryList = null;
                         StreamEntry value = null;
-                        StreamEntryID nextID = new StreamEntryID();
+
+                        StreamEntryID nextID = new StreamEntryID("0-0");
                         System.out.println("main.kickOffStreamListenerThread: Actively Listening to Stream "+streamName);
                         Map.Entry<String, StreamEntryID> streamQuery = null;
                         while(true){
-                            streamQuery = new AbstractMap.SimpleImmutableEntry<>(
-                                    streamName, nextID);
-                            List<Map.Entry<String, List<StreamEntry>>> streamResult =
-                                    streamListener.xread(1,Long.MAX_VALUE,streamQuery);// <--  has to be Long.MAX_VALUE to work
-                            key = streamResult.get(0).getKey(); // name of Stream
-                            streamEntryList = streamResult.get(0).getValue(); // we assume simple use of stream with a single update
+                            try {
+                                streamQuery = new AbstractMap.SimpleImmutableEntry<>(
+                                        streamName, nextID);
+                                List<Map.Entry<String, List<StreamEntry>>> streamResult =
+                                         streamListener.xread(1,Long.MAX_VALUE,streamQuery);// <--  has to be Long.MAX_VALUE to work
+                                key = streamResult.get(0).getKey(); // name of Stream
+                                streamEntryList = streamResult.get(0).getValue(); // we assume simple use of stream with a single update
 
-                            value = streamEntryList.get(0);// entry written to stream
-                            System.out.println("StreamListenerThread: received... "+key+" "+value);
-                            Map<String,StreamEntry> entry = new HashMap();
-                            entry.put(key+":"+value.getID(),value);
-                            streamEventMapProcessor.processStreamEventMap(entry);
-                            nextID = value.getID();
+                                value = streamEntryList.get(0);// entry written to stream
+                                System.out.println("StreamListenerThread: received... " + key + " " + value);
+                                Map<String, StreamEntry> entry = new HashMap();
+                                entry.put(key + ":" + value.getID(), value);
+                                streamEventMapProcessor.processStreamEventMap(entry);
+                                nextID = value.getID();
+                            }catch(java.lang.IndexOutOfBoundsException iobe){}//ignore
                         }
                     }catch(Exception e){
                         e.printStackTrace();

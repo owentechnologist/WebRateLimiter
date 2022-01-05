@@ -71,6 +71,7 @@ public class WebRateLimitService {
                 System.out.println("Before() called... Query String: " + queryString);
                 if (queryString.contains("accountKey")) {
                     isIdentified = true;
+                    storeQueryStringInRedis(queryString);
                     if (instance.isRateOfAccessTooHighForContract(record)) {
                         System.out.println("Too Many requests!");
                         halt(429, "" + (record.getMessage()+getLinks()));
@@ -91,6 +92,20 @@ public class WebRateLimitService {
 
     }
 
+    static void storeQueryStringInRedis(String queryString) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.set(Runtime.getRuntime().toString()+"queryString",queryString);
+        }
+    }
+
+    static String getQueryStringFromRedis() {
+        String queryString ="";
+        try (Jedis jedis = jedisPool.getResource()) {
+            queryString=jedis.get(Runtime.getRuntime().toString()+"queryString");
+        }
+        return queryString;
+    }
+
     static String getResponseForCorrectCitySpellPath(Request req) {
         String val = "</h1>Thank you for your submission</h1>" +
                 "" + instance.submitCity(req.queryParams("uniqueRequestKey"), req.queryParams("city")) + "<p />";
@@ -98,21 +113,22 @@ public class WebRateLimitService {
     }
 
     static String getLinks(){
+        String queryString =getQueryStringFromRedis();
         return
-                "<p /><a href=\"http://localhost:4567?accountKey=007\">RequestAnother?</a>"+
-                "<p /><a href=\"http://localhost:4567/cleaned-submissions?accountKey=007\">See all Submissions?</a>";
+                "<p /><a href=\"http://localhost:4567?"+queryString+"\">RequestAnother?</a>"+
+                "<p /><a href=\"http://localhost:4567/cleaned-submissions?"+queryString+"\">See all Submissions?</a>";
     }
 
     static String getResponseForCleanedSubmissions(Request req){
-        String response = "<p /><h3>Here are the CityNames that have been submitted and cleaned up by this service: <p /> <ol>";
+        String response = "<p /><h3>Here are up to 100 CityNames that have been submitted and cleaned up by this service: <p /> <ol>";
         try (Jedis jedis = jedisPool.getResource()) {
             try {
                 StreamEntryID start = new StreamEntryID("0-0");
-                StreamEntryID end = new StreamEntryID(System.currentTimeMillis(),0l);
-                List<StreamEntry> x = jedis.xrange(BEST_MATCHED_CITY_NAMES_STREAM_NAME, start, end, 10);
+                StreamEntryID end = new StreamEntryID(Long.MAX_VALUE,0l);
+                List<StreamEntry> x = jedis.xrange(BEST_MATCHED_CITY_NAMES_STREAM_NAME, start, end, 100);
                 if (null != x) {
                     if(x.size()<1){
-                        x = jedis.xrange(GARBAGE_CITY_STREAM_NAME, start, end, 10);
+                        x = jedis.xrange(GARBAGE_CITY_STREAM_NAME, start, end, 100);
                         response += "<h2>No entries have been processed yet</h2><p />"+
                                 x.size()+" Entries have been submitted for processing:<p />";
                     }
