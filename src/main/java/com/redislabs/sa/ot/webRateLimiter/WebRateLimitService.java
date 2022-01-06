@@ -90,6 +90,8 @@ public class WebRateLimitService {
 
         get("/cleaned-submissions", (req, res) -> (getResponseForCleanedSubmissions(req))+getLinks());
 
+        get("/delete-cuckoo-and-stream-data", (req, res) -> (getResponseForDeleteKeys(req))+getLinks());
+
     }
 
     static void storeQueryStringInRedis(String queryString) {
@@ -106,6 +108,25 @@ public class WebRateLimitService {
         return queryString;
     }
 
+    // needs to be invoked like this: /delete-cuckoo-and-stream-data?accountKey=11151977
+    static String getResponseForDeleteKeys(Request req) {
+        String val = "<h1>Cuckoo Filters and Stream Data used by this application have been deleted.</h1>";
+        if(req.queryString().contains("11151977")) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                String[] deleteMe = new String[]{"X:GBG:CITY", "X:BEST_MATCHED_CITY_NAMES_BY_SEARCH",
+                        "X:DEDUPED_CITY_NAME_SPELLCHECK_REQUESTS", "CF_BAD_SPELLING_SUBMISSIONS", "CF_BEST_MATCH_SUBMISSIONS",
+                        "CF_CITIES_LIST"
+                };
+                jedis.del(deleteMe);
+            } catch (Throwable t) {
+                val += "<p><b><h2>" + t.getMessage() + "</h2></b></p>";
+            }
+        }else{
+            val = "<p><b><h2>Hold on a minute!<br>Only Account Holder 11151977 is authorized to use this link!</br></h2></b></p>";
+        }
+        return val;
+    }
+
     static String getResponseForCorrectCitySpellPath(Request req) {
         String val = "</h1>Thank you for your submission</h1>" +
                 "" + instance.submitCity(req.queryParams("uniqueRequestKey"), req.queryParams("city")) + "<p />";
@@ -116,7 +137,9 @@ public class WebRateLimitService {
         String queryString =getQueryStringFromRedis();
         return
                 "<p /><a href=\"http://localhost:4567?"+queryString+"\">RequestAnother?</a>"+
-                "<p /><a href=\"http://localhost:4567/cleaned-submissions?"+queryString+"\">See all Submissions?</a>";
+                "<p /><a href=\"http://localhost:4567/cleaned-submissions?"+queryString+"\">See all Submissions?</a>"+
+                "<p /><a href=\"http://localhost:4567/delete-cuckoo-and-stream-data?"+queryString+"\"><em>Reset All Records Of Past Queries?</em></a>"
+                ;
     }
 
     static String getResponseForCleanedSubmissions(Request req){
