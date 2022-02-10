@@ -91,15 +91,19 @@ class CityNameDeduper implements StreamEventMapProcessor {
 
     @Override
     public void processStreamEventMap(Map<String, StreamEntry> payload) {
-        System.out.println(payload.get(payload.keySet().toArray()[0]));
         StreamEntry content = payload.get(payload.keySet().toArray()[0]);
+        System.out.println(content);
+        Long origTimeStamp = content.getID().getTime();
 
         String cityName = content.getFields().get("spellCheckMe");
-        System.out.println("CityNameDeduper.processMap(): cityName: "+cityName);
+        System.out.println("CityNameDeduper.processMap(): cityName: "+cityName+
+                "   OriginalTimeStamp: "+origTimeStamp);
         if(shouldAdd(cityName))
             try(Jedis connection = jedisPool.getResource()){
                 System.out.println("CityNameDeduper.processMap(): "+payload);
-                connection.xadd(dedupedCityNameRequests,null,content.getFields());
+                Map<String, String> data = content.getFields();
+                data.put("OriginalTimeStamp",""+origTimeStamp);
+                connection.xadd(dedupedCityNameRequests,null,data);
             }catch(Throwable t){t.printStackTrace();}
     }
 }

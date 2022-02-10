@@ -52,7 +52,7 @@ Each accountKey coming from a particular IP address is allowed 3 requests/minute
 
 These limits are defined in WebRateLimitService.java:
 
-    int ratePerMinuteAllowed = 3;
+    int ratePerMinuteAllowed = 5;
     int ratePerHourAllowed = 25;
 
 Hit the webserver a few times with requests with the same accountKey to see the response change from a friendly welcome to a friendly -- too many requests.

@@ -25,7 +25,7 @@ The purpose of this web-application is to accept badly spelled city names
 and submit them as data into the 'system' (a redis database).
 Two things make this web-application less likely to suffer abuse:
 1) it uses a sortedSet -based rate-limiting algorithm to limit the # of requests by:
- requests/minute/account max==3
+ requests/minute/account max==5
  requests/hour/account max==25
 2) it uses redis to generate a unique requestID for each request
  (this id expires in 30 seconds whether used or not)
@@ -33,7 +33,7 @@ Two things make this web-application less likely to suffer abuse:
 
 public class WebRateLimitService {
 
-    int ratePerMinuteAllowed = 3;
+    int ratePerMinuteAllowed = 5;
     int ratePerHourAllowed = 25;
 
     private static WebRateLimitService instance = new WebRateLimitService();
@@ -152,7 +152,7 @@ public class WebRateLimitService {
                 if (null != x) {
                     if(x.size()<1){
                         x = jedis.xrange(GARBAGE_CITY_STREAM_NAME, start, end, 100);
-                        response += "<h2>No entries have been processed yet</h2><p />"+
+                        response += "<h2><p style=\"color:blue\">No entries have been processed yet</h2></p>"+
                                 x.size()+" Entries have been submitted for processing:<p />";
                     }
                     Iterator i = x.iterator();

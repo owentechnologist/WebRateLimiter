@@ -90,12 +90,14 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
         StreamEntry content = payload.get(payload.keySet().toArray()[0]);
         String cityName = content.getFields().get("spellCheckMe");
         String requestID = content.getFields().get("requestID");
+        String origTimeStamp = content.getFields().get("OriginalTimeStamp");
         try{
             System.out.println("CityNameLookupMatcher.processMap(): "+payload);
             HashMap<String,String> values = new HashMap<String,String>();
             values.put("requestID",requestID);
             values.put("originalCityName",cityName);
             values.put("bestMatch",findBestMatch(cityName));
+            values.put("OriginalTimeStamp",origTimeStamp);
 
             String dedupValue = values.get("originalCityName")+":"+values.get("bestMatch");
             try(Jedis jedis = jedisPool.getResource()) {
