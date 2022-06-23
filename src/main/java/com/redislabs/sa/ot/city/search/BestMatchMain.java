@@ -42,7 +42,6 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
             jedis.del(cfIndexName);
         }catch(Throwable t){t.printStackTrace();}
     }
-
     static void createCF(){
         try(Jedis jedis = jedisPool.getResource()) {
             if (!jedis.exists(cfIndexName)) {
@@ -58,11 +57,15 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
 
     public String findBestMatch(String cityName){
         System.out.println("CityNameLookupMatcher.processMap().findBestMatch("+cityName+")"+ jedisPool );
-        boolean shouldAdd = true;
+        boolean shouldAdd = false;
         String bestMatch="No Match Found";
+        String score = "";
         try {
             io.redisearch.client.Client searchClient = new Client(citySearchIndex, jedisPool);
-            Query query = new Query(cityName).setSortBy("name_length",true).returnFields("city").limit(0,1);
+            Query query = new Query(cityName).
+                    setSortBy("name_length",true).
+                    returnFields("city").limit(0,1).
+                    setWithScores();
             SearchResult result = searchClient.search(query);
             System.out.println("findBestMatch(cityName) "+result.totalResults);
             if(result.totalResults>0) {
@@ -74,9 +77,30 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
                 LinkedTreeMap<String, String> linkedTreeMap = (LinkedTreeMap<String, String>) o;
                 System.out.println("linkedTreeMap.get(city)  " + linkedTreeMap.get("city"));
                 bestMatch = linkedTreeMap.get("city");
+                score = ((Object)map.get("score")).toString(); //Returns a double for the score
+                shouldAdd = true;
             }
         }catch(Throwable t){t.printStackTrace();}
+        if(shouldAdd){
+            addBestMatchToHistory(cityName,bestMatch,score);
+        }
         return bestMatch;
+    }
+
+    // creates a hash where the Hash key name equals
+    // history:<the bestMatchFound> (a city name)
+    // example... history:Toronto
+    // containing the cityNameProvided and the score search gave the result
+    // this allows observers to see what search results come from
+    // historical inputs
+    // note that due to the deduping logic using Cuckoo filters we should never
+    // see the same cityNameProvided show up more than one time
+    private void addBestMatchToHistory(String cityNameProvided,String bestMatchFound,String score) {
+        try (Jedis jedis = jedisPool.getResource()) {
+            Map<String,String> values = new HashMap<String,String>();
+            values.put(cityNameProvided,score);
+            jedis.hset("history:"+bestMatchFound,values);
+        }
     }
 
     static Map<String,String> mapifyJSONRecord(String json){
