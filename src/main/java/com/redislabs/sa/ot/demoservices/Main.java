@@ -40,21 +40,45 @@ import redis.clients.jedis.JedisPool;
  * (if you are not running the browser on the same machine you must provide the proper host)
  * Example: http://192.168.1.59:4567?accountKey=007
  *
- *
+ * Adding any argument to the startup of this application deliberately causes a multi-minute delay
+ * in the startup of all the 4 services - simply to create a more interesting Time Series data set
+ * mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow"
  */
 public class Main {
     public static JedisPool jedisPool = JedisConnectionFactory.getInstance().getJedisPool();
 
-    public static void main(String[] args) {
-        DedupMain.main(null);
-        DataSearchBootstrapMain.main(null);
-        BestMatchMain.main(null);
-        WebRateLimitService service = WebRateLimitService.getInstance();
+    public static void main(String[] args){
+        if(args.length<1){
+            Main.goFast();
+        }else{
+            Main.goSlow();
+        }
         System.out.println("Kicked Off Webserver listening on port 4567");
         System.out.println("To test your rate limiting ... use http://[host]:4567?accountKey=[yourKey]");
         System.out.println("Example ...  http://127.0.0.1:4567?accountKey=007");
         System.out.println("Example2 ...  http://192.168.1.59:4567?accountKey=007");
         System.out.println(("Example 3... http://127.0.0.1:4567/cleaned-submissions?accountKey=007"));
+    }
+
+    static void goFast(){
+        DedupMain.main(null);
+        DataSearchBootstrapMain.main(null);
+        BestMatchMain.main(null);
+        WebRateLimitService service = WebRateLimitService.getInstance();
+    }
+
+    static void goSlow(){
+        try {
+            System.out.println("\n\nStarting 4 services with \n\tBIG \n\tpauses \n\tbetween \n\tthem \nfor TimeSeries fun...\n");
+            System.out.println("Expect to wait 4 + minutes before the app is fully ready...\n\n");
+            DedupMain.main(null);
+            Thread.sleep(60000);
+            DataSearchBootstrapMain.main(null);
+            Thread.sleep(90000);
+            BestMatchMain.main(null);
+            Thread.sleep(120000);
+            WebRateLimitService service = WebRateLimitService.getInstance();
+        }catch(Throwable t){}//Thread sleep is considered risky...
     }
 
 }
