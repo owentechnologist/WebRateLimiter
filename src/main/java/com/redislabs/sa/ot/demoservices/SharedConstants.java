@@ -1,8 +1,5 @@
 package com.redislabs.sa.ot.demoservices;
 
-import com.redislabs.sa.ot.util.JedisConnectionFactory;
-import redis.clients.jedis.JedisPool;
-
 public class SharedConstants {
 
     public static final String GARBAGE_CITY_STREAM_NAME="X:GBG:CITY";

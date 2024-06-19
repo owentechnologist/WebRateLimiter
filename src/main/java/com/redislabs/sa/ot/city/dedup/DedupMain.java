@@ -23,8 +23,8 @@ public class DedupMain {
     public static void main(String [] args){
         TimeSeriesHeartBeatEmitter heartBeatEmitter = new TimeSeriesHeartBeatEmitter(jedisPool, DedupMain.class.getCanonicalName());
         System.out.println("Starting deduper...");
-        cityNameDeduper.cleanupCF();
-        cityNameDeduper.createCF();
+        //cityNameDeduper.cleanupCF();  We want to retain the deduping info between executions
+        cityNameDeduper.createCF(); // this only has an effect if the filter does not exist
         redisStreamAdapter.listenToStream(cityNameDeduper);
     }
 }
@@ -74,6 +74,8 @@ class CityNameDeduper implements StreamEventMapProcessor {
     }
 
     public boolean shouldAdd(String cityName){
+        // there is also the cfADDNX option: (worth looking into as it might avoid an extra call)
+        // DedupMain.cfClient.cfAddNx("CF:dedupFilter","entry:"+x+""+y);
         boolean shouldAdd = true;
         try {
             if(DedupMain.cfClient.cfExists(DedupMain.cfIndexName,cityName)){

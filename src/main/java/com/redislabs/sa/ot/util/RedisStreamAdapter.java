@@ -4,7 +4,6 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.StreamEntry;
 import redis.clients.jedis.StreamEntryID;
-import redis.clients.jedis.StreamEntryID.*;
 import redis.clients.jedis.exceptions.JedisDataException;
 
 import java.util.AbstractMap;

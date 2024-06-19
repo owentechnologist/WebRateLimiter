@@ -6,7 +6,6 @@ import static spark.Spark.*;
 import com.redislabs.sa.ot.util.JedisConnectionFactory;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.StreamEntry;
 import redis.clients.jedis.StreamEntryID;
 import redis.clients.jedis.params.SetParams;

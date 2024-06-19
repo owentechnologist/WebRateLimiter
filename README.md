@@ -17,9 +17,16 @@ This example embeds a Java webserver ( https://sparkjava.com/documentation )
 
 ![services](multimodalServices.png)
 
+The main flow of the application is driven by the user who submits possible city names for verification / correction:
+![commonflow](commonflow.png)
+
+Behind the scenes: by two separate microservices (in an asynchronous fashion) -the requests are deduped and then processed through a redis search effort:
+
+![asyncflow](asynchronousflow.png)
+
 The premise of the overall demo is - spell check / cleanse submitted city names.
 
-City address data is loaded from a csv file populated with data from a free data set provided by: https://simplemaps.com/
+Reference [good] City address data is loaded from a csv file populated with data from a free data set provided by: https://simplemaps.com/
 
 
 The various services are connected asynchronously through redis streams.
