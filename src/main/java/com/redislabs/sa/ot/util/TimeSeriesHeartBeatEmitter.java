@@ -10,6 +10,7 @@ import java.util.Map;
      * The following requires the presence of an active Redis TimeSeries module:
     Use commands like these to see what is being posted to the timeseries:
     TS.MRANGE - + AGGREGATION avg 60 FILTER measure=heartbeat
+    TS.MRANGE - + AGGREGATION count 60000 FILTER measure=heartbeat GROUPBY servicename reduce avg
     TS.MGET WITHLABELS FILTER measure=heartbeat
 */
 public class TimeSeriesHeartBeatEmitter {
@@ -21,7 +22,8 @@ public class TimeSeriesHeartBeatEmitter {
         RedisTimeSeries timeSeries = new RedisTimeSeries(pool);
         Map<String, String> labels = new HashMap<>();
         labels.put("measure","heartbeat");
-        String keyName = "TS:"+serviceName;
+        labels.put("servicename",serviceName);
+        String keyName = "TS:WRL:"+serviceName;
         try{
             timeSeries.create(keyName, 24 * 2 * 3600, labels);
         }catch(Throwable t){
@@ -40,18 +42,16 @@ public class TimeSeriesHeartBeatEmitter {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                long secondsWithoutIncident = 0;
                 try {
                     while(true) {
                         try{
-                            timeSeries.add(keyName, secondsWithoutIncident++);
+                            //each service checks in periodically -registering a value to indicate it is alive
+                            timeSeries.add(keyName, 1);
                         }catch(Throwable t){
                             System.out.println("Timestamp: "+System.currentTimeMillis());
-                            secondsWithoutIncident =0;
                             t.printStackTrace();
                         }
                         Thread.sleep(10000);
-                        secondsWithoutIncident = secondsWithoutIncident+10;
                     }
                 } catch (Throwable t) {
                     t.printStackTrace();

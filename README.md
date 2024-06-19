@@ -1,16 +1,15 @@
 # Multi-modal Redis-based Application with many features:
 
-### WebRateLimiter. -- based off of the python example provided by Chris Mague here: 
+### WebRateLimiter and Redis Search application
 
-https://github.com/Redislabs-Solution-Architects/RateLimitingExample/tree/sliding_window
-### chris also makes his python example available here:
+### The sliding window rate limiter pattern used in this app is borrowed from this python example available here:
 https://github.com/maguec/RateLimitingExample/tree/sliding_window
 
-A Java code example of limiting number of requests to a webserver using Redis SortedSets API
+This is a Java code example of limiting number of requests to a webserver using Redis SortedSets API
 
 This example embeds a Java webserver ( https://sparkjava.com/documentation ) 
 
-# This web-app is part of a larger services demo involving a deduper and a search lookup.
+#### This web-app is the front end of a micro-services demo involving a deduper and a search lookup.
 
 
 ![UI](multimodalRedis.png)
@@ -32,6 +31,11 @@ Reference [good] City address data is loaded from a csv file populated with data
 The various services are connected asynchronously through redis streams.
 
 They all emit a heartbeat to redis TimeSeries every 10 seconds to show they are healthy.
+Try this query:  
+
+```
+TS.MRANGE - + AGGREGATION count 60000 FILTER measure=heartbeat GROUPBY servicename reduce avg 
+```
 
 One service loads the redis database with Hashes containing Canadian city names and a nod to NY.
 It also creates the search index so that others can search for citynames.
