@@ -1,6 +1,6 @@
 package com.redislabs.sa.ot.util;
 
-import redis.clients.jedis.StreamEntry;
+import redis.clients.jedis.resps.StreamEntry;
 
 import java.util.Map;
 

@@ -3,9 +3,8 @@ package com.redislabs.sa.ot.city.dedup;
 import com.redislabs.sa.ot.util.RedisStreamAdapter;
 import com.redislabs.sa.ot.util.StreamEventMapProcessor;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
-import io.rebloom.client.Client;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.StreamEntry;
+import redis.clients.jedis.StreamEntryID;
+import redis.clients.jedis.resps.StreamEntry;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +15,6 @@ import static com.redislabs.sa.ot.demoservices.SharedConstants.*;
 public class DedupMain {
 
     static RedisStreamAdapter redisStreamAdapter = new RedisStreamAdapter(GARBAGE_CITY_STREAM_NAME,jedisPool);
-    static Client cfClient = new Client(jedisPool);
     static String cfIndexName = "CF_BAD_SPELLING_SUBMISSIONS";
     static CityNameDeduper cityNameDeduper = new CityNameDeduper();
 
@@ -32,16 +30,14 @@ public class DedupMain {
 class CityNameDeduper implements StreamEventMapProcessor {
 
     static void cleanupCF(){
-        try (Jedis connection = jedisPool.getResource()){
-            connection.del(DedupMain.cfIndexName);
+        try{
+            jedisPool.del(DedupMain.cfIndexName);
         }catch(Throwable t){t.printStackTrace();}
     }
 
     static void createCF(){
-        try (Jedis connection = jedisPool.getResource()) {
-            if (!connection.exists(DedupMain.cfIndexName)) {
-                DedupMain.cfClient.cfCreate(DedupMain.cfIndexName, 100000);
-            }
+        if (!jedisPool.exists(DedupMain.cfIndexName)) {
+            jedisPool.cfReserve(DedupMain.cfIndexName, 100000);
         }
     }
 
@@ -78,10 +74,10 @@ class CityNameDeduper implements StreamEventMapProcessor {
         // DedupMain.cfClient.cfAddNx("CF:dedupFilter","entry:"+x+""+y);
         boolean shouldAdd = true;
         try {
-            if(DedupMain.cfClient.cfExists(DedupMain.cfIndexName,cityName)){
+            if(jedisPool.cfExists(DedupMain.cfIndexName,cityName)){
                 shouldAdd=false;
             }else{
-                DedupMain.cfClient.cfAdd(DedupMain.cfIndexName,cityName);
+                jedisPool.cfAdd(DedupMain.cfIndexName,cityName);
             }
         }catch(Throwable t){
             t.printStackTrace();
@@ -100,12 +96,12 @@ class CityNameDeduper implements StreamEventMapProcessor {
         String cityName = content.getFields().get("spellCheckMe");
         System.out.println("CityNameDeduper.processMap(): cityName: "+cityName+
                 "   OriginalTimeStamp: "+origTimeStamp);
-        if(shouldAdd(cityName))
-            try(Jedis connection = jedisPool.getResource()){
-                System.out.println("CityNameDeduper.processMap(): "+payload);
-                Map<String, String> data = content.getFields();
-                data.put("OriginalTimeStamp",""+origTimeStamp);
-                connection.xadd(dedupedCityNameRequests,null,data);
-            }catch(Throwable t){t.printStackTrace();}
+        if(shouldAdd(cityName)) {
+            System.out.println("CityNameDeduper.processMap(): " + payload);
+            Map<String, String> data = content.getFields();
+            data.put("OriginalTimeStamp", "" + origTimeStamp);
+            StreamEntryID streamEntryID = StreamEntryID.NEW_ENTRY;
+            jedisPool.xadd(dedupedCityNameRequests,streamEntryID, data);
+        }
     }
 }

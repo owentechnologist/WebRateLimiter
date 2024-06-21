@@ -1,10 +1,10 @@
 package com.redislabs.sa.ot.city.loader;
 
+import com.redislabs.sa.ot.demoservices.SharedConstants;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
-import io.redisearch.Schema;
-import io.redisearch.client.Client;
-import io.redisearch.client.IndexDefinition;
-import redis.clients.jedis.Jedis;
+import redis.clients.jedis.search.IndexDefinition;
+import redis.clients.jedis.search.IndexOptions;
+import redis.clients.jedis.search.Schema;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,12 +21,11 @@ import static com.redislabs.sa.ot.demoservices.SharedConstants.*;
 public class DataSearchBootstrapMain {
 
     static boolean isNoDupeCallFailure = false;
-    static io.rebloom.client.Client cfClient = new io.rebloom.client.Client(jedisPool);
 
     public static void main(String[] args){
         TimeSeriesHeartBeatEmitter heartBeatEmitter = new TimeSeriesHeartBeatEmitter(jedisPool,DataSearchBootstrapMain.class.getCanonicalName());
-        cleanupIDX();
-        cleanupCF();
+        // cleanupIDX();
+        // cleanupCF();
         createCF();
         loadCitiesAsHashes();
         createCitySearchIndex();
@@ -34,18 +33,14 @@ public class DataSearchBootstrapMain {
     }
 
     static void cleanupCF(){
-        Jedis jedis = jedisPool.getResource();
         try {
-            jedis.del(cfCitiesList);
+            jedisPool.del(cfCitiesList);
         }catch(Throwable t){t.printStackTrace();}
-        finally {
-            jedis.close();
-        }
     }
 
     static void createCF(){
         try {
-            cfClient.cfCreate(cfCitiesList, 100000);
+            jedisPool.cfReserve(cfCitiesList, 100000);
         }catch(Throwable t){
             t.printStackTrace();
         }
@@ -53,8 +48,7 @@ public class DataSearchBootstrapMain {
 
     static void cleanupIDX(){
         try{
-            Client client = new Client(citySearchIndex,jedisPool);
-            client.dropIndex();
+            jedisPool.ftDropIndex(citySearchIndex);
         }catch(Throwable t){t.printStackTrace();}
     }
 
@@ -62,7 +56,7 @@ public class DataSearchBootstrapMain {
         boolean isNoDupe = true;
         if(! isNoDupeCallFailure) {
             try {
-                if (cfClient.cfExists(cfCitiesList, cityRecord)) {
+                if (jedisPool.cfExists(cfCitiesList, cityRecord)) {
                     isNoDupe = false;
                 }
             } catch (Throwable t) {
@@ -74,7 +68,12 @@ public class DataSearchBootstrapMain {
     }
 
     static void loadCitiesAsHashes(){
-        try(Jedis jedis = jedisPool.getResource()) {
+        long indexSize=0;
+        try {
+            indexSize = jedisPool.ftSearch(citySearchIndex, "*").getTotalResults();
+        }catch(Throwable t){t.getMessage();}
+        if(indexSize<1739){
+            System.out.println("\n*****\nLoading cities from CSV file...\n*****\n");
             CSVCities cHelper = CSVCities.getInstance();
             ArrayList<City> cities = cHelper.getCities();
             for (City c : cities) {
@@ -88,11 +87,12 @@ public class DataSearchBootstrapMain {
                     zipPostalCodes += cd + " , ";
                 }
                 map.put("zip_codes_or_postal_codes", zipPostalCodes);
-                if (noDupe("city:" + c.getId())) {
-                    jedis.hmset("city:" + c.getId(), map);
+                if (noDupe("city_" + c.getId())) {
+                    jedisPool.hmset("city_" + c.getId(), map);
                 }
             }
         }
+        System.out.println("********** \nCities loaded\n**********");
     }
 
     static void createCitySearchIndex(){
@@ -103,9 +103,12 @@ public class DataSearchBootstrapMain {
                 .addGeoField("geopoint")
                 .addSortableNumericField("name_length");
         IndexDefinition def = new IndexDefinition()
-                .setPrefixes(new String[] {"city:"});
-        Client client = new Client(citySearchIndex,jedisPool);
-        client.createIndex(sc, Client.IndexOptions.defaultOptions().setDefinition(def));
+                .setPrefixes(new String[] {"city_"});
+        try {
+            jedisPool.ftCreate(citySearchIndex, IndexOptions.defaultOptions().setDefinition(def), sc);
+        }catch(redis.clients.jedis.exceptions.JedisDataException jde){
+            System.out.println(jde.getMessage());
+        }
     }
 }
 

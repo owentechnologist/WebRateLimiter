@@ -3,9 +3,12 @@ package com.redislabs.sa.ot.demoservices;
 import com.redislabs.sa.ot.city.dedup.DedupMain;
 import com.redislabs.sa.ot.city.loader.DataSearchBootstrapMain;
 import com.redislabs.sa.ot.city.search.BestMatchMain;
-import com.redislabs.sa.ot.util.JedisConnectionFactory;
+import com.redislabs.sa.ot.util.JedisPooledGetter;
 import com.redislabs.sa.ot.webRateLimiter.WebRateLimitService;
-import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPooled;
+
+import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  *
@@ -13,7 +16,7 @@ import redis.clients.jedis.JedisPool;
  * Redis Search, Redis TimeSeries, Redis Bloom, The Hash type, the String type, SortedSets, and Streams
  * To run the default configuration of this application make certain your jedisconnectionfactory.properties are correct then execute:
  *
- * mvn compile exec:java
+ *  mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow -h <host> -p <port> -s <password>"
  * That starts the following processes:
  *
  * 1) A Search Bootstrapper that loads data into Redis in the form of Hashes -
@@ -45,13 +48,15 @@ import redis.clients.jedis.JedisPool;
  * mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow"
  */
 public class Main {
-    public static JedisPool jedisPool = JedisConnectionFactory.getInstance().getJedisPool();
-
+    public static JedisPooled jedisPool = null;
     public static void main(String[] args){
-        if(args.length<1){
-            Main.goFast();
-        }else{
+        JedisPooledGetter jedisPooledGetter = new JedisPooledGetter(args);
+        jedisPool=jedisPooledGetter.getJedisPooled();
+        ArrayList<String> arrayListArgs = new ArrayList<String>(Arrays.asList(args));
+        if(arrayListArgs.contains("goslow")){
             Main.goSlow();
+        }else{
+            Main.goFast();
         }
         System.out.println("Kicked Off Webserver listening on port 4567");
         System.out.println("To test your rate limiting ... use http://[host]:4567?accountKey=[yourKey]");

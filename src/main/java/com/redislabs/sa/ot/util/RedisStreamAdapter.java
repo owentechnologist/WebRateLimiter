@@ -1,24 +1,27 @@
 package com.redislabs.sa.ot.util;
 
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.StreamEntry;
+import redis.clients.jedis.JedisPooled;
 import redis.clients.jedis.StreamEntryID;
+import redis.clients.jedis.params.XReadGroupParams;
+import redis.clients.jedis.params.XReadParams;
+import redis.clients.jedis.resps.StreamEntry;
+
 import redis.clients.jedis.exceptions.JedisDataException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.List;
 
 public class RedisStreamAdapter {
 
-    private JedisPool connectionPool;
+    private JedisPooled jedisPooled;
     private String streamName;
     private String consumerGroupName;
 
-    public RedisStreamAdapter(String streamName, JedisPool connectionPool){
-        this.connectionPool=connectionPool;
+    public RedisStreamAdapter(String streamName, JedisPooled jedisPooled){
+        this.jedisPooled = jedisPooled;
         this.streamName=streamName;
     }
 
@@ -30,14 +33,14 @@ public class RedisStreamAdapter {
         this.consumerGroupName = consumerGroupName;
         StreamEntryID nextID = StreamEntryID.LAST_ENTRY;
         try {
-            String thing = this.connectionPool.getResource().xgroupCreate(this.streamName, this.consumerGroupName, nextID, true);
+            String thing = this.jedisPooled.xgroupCreate(this.streamName, this.consumerGroupName, nextID, true);
         }catch(JedisDataException jde){
             System.out.println("ConsumerGroup "+consumerGroupName+ " already exists -- continuing");
         }
     }
 
     // This Method can be invoked multiple times each time with a unique consumerName
-    //Assumes The group has been created - now we want a single named consumer to start
+    // Assumes The group has been created - now we want a single named consumer to start
     // using 0 will grab any pending messages for that listener in case it failed mid-processing
     public void namedGroupConsumerStartListening(String consumerName, StreamEventMapProcessor streamEventMapProcessor){
         new Thread(new Runnable() {
@@ -50,25 +53,26 @@ public class RedisStreamAdapter {
                 System.out.println("RedisStreamAdapter.namedGroupConsumerStartListening(--> "+consumerName+"  <--): Actively Listening to Stream "+streamName);
                 long counter = 0;
                 Map.Entry<String, StreamEntryID> streamQuery = null;
-                long blockTime = Long.MAX_VALUE-200000; // on some OS MAX_VALUE results in a negative value! (overflow)
+                int blockTime = Integer.MAX_VALUE-2000; // on some OS MAX_VALUE results in a negative value! (overflow)
                 while(true) {
-                    try (Jedis streamReader = connectionPool.getResource();) {
-                        //grab one entry from the target stream at a time
-                        //block for long time between attempts
-                        List<Map.Entry<String, List<StreamEntry>>> streamResult =
-                                streamReader.xreadGroup(consumerGroupName, consumerName,
-                                        1, blockTime, false, new AbstractMap.SimpleEntry(streamName,StreamEntryID.UNRECEIVED_ENTRY));
-                        key = streamResult.get(0).getKey(); // name of Stream
-                        streamEntryList = streamResult.get(0).getValue(); // we assume simple use of stream with a single update
-                        value = streamEntryList.get(0);// entry written to stream
-                        System.out.println("ConsumerGroup "+consumerGroupName+" and Consumer "+consumerName+" has received... "+key+" "+value);
-                        Map<String,StreamEntry> entry = new HashMap();
-                        entry.put(key+":"+value.getID()+":"+consumerName,value);
-                        lastSeenID = value.getID();
-                        streamEventMapProcessor.processStreamEventMap(entry);
-                        streamReader.xack(key, consumerGroupName, lastSeenID);
-                        streamReader.xdel(key,lastSeenID);// delete test
-                    }
+                    //grab one entry from the target stream at a time
+                    //block for long time between attempts
+                    XReadGroupParams xReadGroupParams = new XReadGroupParams().count(1).block(blockTime);
+                    List<Map.Entry<String, List<StreamEntry>>> streamResult =
+                            jedisPooled.xreadGroup(consumerGroupName.getBytes(StandardCharsets.UTF_8),
+                                    consumerName.getBytes(StandardCharsets.UTF_8),
+                                    xReadGroupParams,
+                                    new AbstractMap.SimpleEntry(streamName,StreamEntryID.UNRECEIVED_ENTRY));
+                    key = streamResult.get(0).getKey(); // name of Stream
+                    streamEntryList = streamResult.get(0).getValue(); // we assume simple use of stream with a single update
+                    value = streamEntryList.get(0);// entry written to stream
+                    System.out.println("ConsumerGroup "+consumerGroupName+" and Consumer "+consumerName+" has received... "+key+" "+value);
+                    Map<String,StreamEntry> entry = new HashMap();
+                    entry.put(key+":"+value.getID()+":"+consumerName,value);
+                    lastSeenID = value.getID();
+                    streamEventMapProcessor.processStreamEventMap(entry);
+                    jedisPooled.xack(key, consumerGroupName, lastSeenID);
+                    jedisPooled.xdel(key,lastSeenID);// delete test
                 }
             }
         }).start();
@@ -79,36 +83,36 @@ public class RedisStreamAdapter {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    try (Jedis streamListener =  connectionPool.getResource();){
-                        String key = "";
-                        List<StreamEntry> streamEntryList = null;
-                        StreamEntry value = null;
+                    String key = "";
+                    List<StreamEntry> streamEntryList = null;
+                    StreamEntry value = null;
 
-                        StreamEntryID nextID = new StreamEntryID("0-0");
-                        System.out.println("main.kickOffStreamListenerThread: Actively Listening to Stream "+streamName);
-                        Map.Entry<String, StreamEntryID> streamQuery = null;
-                        while(true){
-                            try {
-                                streamQuery = new AbstractMap.SimpleImmutableEntry<>(
-                                        streamName, nextID);
-                                List<Map.Entry<String, List<StreamEntry>>> streamResult =
-                                         streamListener.xread(1,Long.MAX_VALUE,streamQuery);// <--  has to be Long.MAX_VALUE to work
-                                key = streamResult.get(0).getKey(); // name of Stream
-                                streamEntryList = streamResult.get(0).getValue(); // we assume simple use of stream with a single update
+                    StreamEntryID nextID = new StreamEntryID("0-0");
+                    System.out.println("main.kickOffStreamListenerThread: Actively Listening to Stream " + streamName);
+                    HashMap<String, StreamEntryID> streamQuery = new HashMap<String,StreamEntryID>();
+                    while (true) {
+                        try {
+                            streamQuery = new HashMap();
+                            streamQuery.put(streamName,nextID);
+                            XReadParams xReadParams = new XReadParams().block(Integer.MAX_VALUE).count(1);
+                            //HashMap<String,StreamEntryID> targetStreams = new HashMap<String,StreamEntryID>(){{}}
+                            List<Map.Entry<String, List<StreamEntry>>> streamResult =
+                                    jedisPooled.xread(xReadParams, streamQuery);
+                            key = streamResult.get(0).getKey(); // name of Stream
+                            streamEntryList = streamResult.get(0).getValue(); // we assume simple use of stream with a single update
 
-                                value = streamEntryList.get(0);// entry written to stream
-                                System.out.println("StreamListenerThread: received... " + key + " " + value);
-                                Map<String, StreamEntry> entry = new HashMap();
-                                entry.put(key + ":" + value.getID(), value);
-                                streamEventMapProcessor.processStreamEventMap(entry);
-                                nextID = value.getID();
-                            }catch(java.lang.IndexOutOfBoundsException iobe){}//ignore
+                            value = streamEntryList.get(0);// entry written to stream
+                            System.out.println("StreamListenerThread: received... " + key + " " + value);
+                            Map<String, StreamEntry> entry = new HashMap();
+                            entry.put(key + ":" + value.getID(), value);
+                            streamEventMapProcessor.processStreamEventMap(entry);
+                            nextID = value.getID();
+                        } catch (java.lang.IndexOutOfBoundsException iobe) {
+                        }catch(Throwable t){
+                            t.printStackTrace();
                         }
-                    }catch(Exception e){
-                        e.printStackTrace();
                     }
                 }
-            }).start();
+        }).start();
     }
-
 }

@@ -4,8 +4,8 @@ import java.text.SimpleDateFormat;
 
 public class RateLimitRecord {
 
-    private long lastMinute = System.currentTimeMillis()-60000;
-    private long lastHour = System.currentTimeMillis()-(60000*60);
+    private int lastMinute = (int)(System.currentTimeMillis()-60000);
+    private int lastHour = (int)(System.currentTimeMillis()-(60000*60));
     private String minuteLimitKey = null;
     private String hourLimitKey = null;
     private long currentTimeArg = System.currentTimeMillis();
@@ -22,8 +22,8 @@ public class RateLimitRecord {
     public String getMinuteLimitKey(){return this.minuteLimitKey;}
     public String getHourLimitKey(){return this.hourLimitKey;}
     public double getCurrentTimeArg() {return this.currentTimeArg;}
-    public long getLastMinute() {return this.lastMinute;}
-    public long getLastHour() { return this.lastHour; }
+    public int getLastMinute() {return this.lastMinute;}
+    public int getLastHour() { return this.lastHour; }
     public String getMessage(){return this.message;}
     public void setMessage(String val){this.message = val;}
     public String getCurrentTimeFormatted(){
