@@ -50,20 +50,20 @@ To run the example:
   (make sure your redis instance supports the TimeSeries, Search, and Blooom modules)
 
 ```
-mvn compile exec:java -Dexec.cleanupDaemonThreads=false 
+mvn compile exec:java -Dexec.cleanupDaemonThreads=false -h <redishost> -p <redisport> -s <redispass> 
 ```
 
 If you want to have each of the 4 services started with a lengthy pause between them you can pass an argument to the Main.main method like this:
 
 ``` 
-mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow"
+mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow -h <redishost> -p <redisport> -s <redispass>"
 ```
 (you will have to wait 4 + minutes for the full launch in this case)
 
 ## General information for the user:
 From a browser use http://[host]:4567?accountKey=[yourKey]
 
-Example ...  http://127.0.0.1:4567?accountKey=007
+Example ...  https://127.0.0.1:4567?accountKey=007
 
 The response will show how many requests have been made in the last minute and last hour.
 

@@ -1,7 +1,6 @@
 package com.redislabs.sa.ot.city.search;
 
 import com.google.gson.Gson;
-import com.google.gson.internal.LinkedTreeMap;
 import com.redislabs.sa.ot.demoservices.SharedConstants;
 import com.redislabs.sa.ot.util.StreamEventMapProcessor;
 import com.redislabs.sa.ot.util.RedisStreamAdapter;
@@ -65,7 +64,7 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
                     setWithScores();
             SearchResult result = jedisPool.ftSearch(SharedConstants.citySearchIndex,query);
             System.out.println("findBestMatch(cityName) "+result.getTotalResults());
-            if(result.getTotalResults()>0) {
+            if((result.getTotalResults()>0)) {
                 System.out.println(result.getDocuments().get(0));
                 System.out.println("result.docs " + result.getDocuments().toArray()[0]);
                 Map<String, String> map = mapifyJSONRecord(result.getDocuments().toArray()[0].toString());
@@ -79,8 +78,26 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
                 //bestMatch = linkedTreeMap.get("city");
                 score = ((Object)map.get("score")).toString(); //Returns a double for the score
                 System.out.println("Score for best Match is: "+score);
-                if(Float.parseFloat(score)>1) {
+                if(Float.parseFloat(score)>4.0) {
                     shouldAdd = true;
+                    System.out.println("Adding a match to the cleaned cities (score better than 4.0)");
+                }
+            }
+            if (!shouldAdd){
+                query = new Query("%%"+cityName+"%%").
+                        setSortBy("name_length",true).
+                        returnFields("city").limit(0,1).
+                        setWithScores();
+                result = jedisPool.ftSearch(SharedConstants.citySearchIndex,query);
+                Map<String, String> map = mapifyJSONRecord(result.getDocuments().toArray()[0].toString());
+                Object o = map.get("properties");
+                Object ino = ((ArrayList<Object>)o).get(0);
+                bestMatch = ((String)ino).split("=")[1];
+                score = ((Object)map.get("score")).toString(); //Returns a double for the score
+                System.out.println("Second try [with Levenstein]: Score for best Match is: "+score);
+                if(Float.parseFloat(score)>=4.0) {
+                    shouldAdd = true;
+                    System.out.println("Adding a match to the cleaned cities (score better than 4.0)");
                 }
             }
         }catch(Throwable t){t.printStackTrace();}
