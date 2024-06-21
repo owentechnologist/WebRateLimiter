@@ -1,6 +1,5 @@
 package com.redislabs.sa.ot.city.loader;
 
-import com.redislabs.sa.ot.demoservices.SharedConstants;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
 import redis.clients.jedis.search.IndexDefinition;
 import redis.clients.jedis.search.IndexOptions;

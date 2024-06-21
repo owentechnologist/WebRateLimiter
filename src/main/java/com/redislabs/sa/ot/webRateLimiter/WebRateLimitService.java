@@ -80,7 +80,7 @@ public class WebRateLimitService {
                 System.out.println("Before() called... Query String: " + queryString);
                 if (queryString.contains("accountKey")) {
                     isIdentified = true;
-                    storeQueryStringInRedis(queryString);
+                    storeQueryStringInRedis(queryString);//Imagine this as a long-term session opportunity
                     if (instance.isRateOfAccessTooHighForContract(record)) {
                         System.out.println("Too Many requests!");
                         halt(429, "" + (record.getMessage()+getLinks()));
@@ -106,7 +106,9 @@ public class WebRateLimitService {
     }
 
     static void storeQueryStringInRedis(String queryString) {
-        jedisPool.set(Runtime.getRuntime().toString()+"queryString",queryString);
+        //Keeping a record of this runtime acting as vehicle for this acctKey for 1 hour:
+        //This is just a placeholder for future anti-fraud or similar gatekeeping activities
+        jedisPool.set(Runtime.getRuntime().toString()+"queryString",queryString,new SetParams().ex(3600));
     }
 
     static String getQueryStringFromRedis() {

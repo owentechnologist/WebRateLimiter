@@ -60,6 +60,18 @@ mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow -h <
 ```
 (you will have to wait 4 + minutes for the full launch in this case)
 
+### Additional Keys/commands to look into using RedisInsights:
+```
+city*
+X:GBG*
+X:DED*
+X:BEST*
+z:rate*
+java.lang.Runtime*
+TOPK.LIST TOPK:WRL:TOP_TEN_SUBMITTED_CITY_NAMES
+history*
+```
+
 ## General information for the user:
 From a browser use http://[host]:4567?accountKey=[yourKey]
 
