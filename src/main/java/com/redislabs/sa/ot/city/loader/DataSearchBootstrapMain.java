@@ -39,7 +39,9 @@ public class DataSearchBootstrapMain {
 
     static void createCF(){
         try {
-            jedisPool.cfReserve(cfCitiesList, 100000);
+            if(!jedisPool.exists(cfCitiesList)) {
+                jedisPool.cfReserve(cfCitiesList, 100000);
+            }
         }catch(Throwable t){
             t.printStackTrace();
         }

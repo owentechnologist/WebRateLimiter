@@ -3,11 +3,8 @@ import static com.redislabs.sa.ot.demoservices.Main.jedisPool;
 import static com.redislabs.sa.ot.demoservices.SharedConstants.*;
 import static spark.Spark.*;
 
-import com.redislabs.sa.ot.demoservices.Main;
-import com.redislabs.sa.ot.demoservices.SharedConstants;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
 import com.redislabs.sa.ot.util.TopkHelper;
-import redis.clients.jedis.Jedis;
 import redis.clients.jedis.StreamEntryID;
 import redis.clients.jedis.params.SetParams;
 import redis.clients.jedis.resps.StreamEntry;
@@ -169,7 +166,7 @@ public class WebRateLimitService {
                 "<p /><a href=\"http://localhost:4567?"+queryString+"\">RequestAnother?</a>"+
                 "<p /><a href=\"http://localhost:4567/cleaned-submissions?"+queryString+"\">See all Submissions?</a>"+
                 "<p /><a href=\"http://localhost:4567/top10-submissions?"+queryString+"\">Retrieve the top 10 Submissions?</a>"+
-                "<p /><a href=\"http://localhost:4567/delete-cuckoo-and-stream-data?"+queryString+"\"><em>Reset All Records Of Past Queries?</em></a>"
+                "<p /><a href=\"http://localhost:4567/delete-cuckoo-and-stream-data?"+queryString+"\">delete-cuckoo-and-stream-data?</a>"
                 ;
     }
 
@@ -263,7 +260,7 @@ public class WebRateLimitService {
         topkHelper.addEntryToMyTopKKey(city);
         if(jedisPool.exists(requestKey)) {
             jedisPool.del(requestKey); // only one request / key allowed!
-            jedisPool.set("gbg:"+city,city);
+            jedisPool.set("gbg:submissions:slidingyear:"+city,city,new SetParams().ex(31536000));
             Map<String,String> citySubmission= new HashMap<String,String>();
             citySubmission.put("spellCheckMe",city);
             citySubmission.put("requestID",requestKey);

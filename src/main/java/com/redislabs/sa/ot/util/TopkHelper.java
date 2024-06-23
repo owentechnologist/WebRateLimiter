@@ -2,6 +2,14 @@ package com.redislabs.sa.ot.util;
 import redis.clients.jedis.JedisPooled;
 import java.util.Map;
 
+/**
+ * This implementation allows you to set the size of the topk when you first create it.
+ * You also set the name of the topk key
+ * when those things are set as well as a reference to a JedisPooled connection
+ * you call initTopK to kick off the new topK Key in your Redis database
+ * it makes adding entries a trivial exercise
+ * - you just pass in any String that is your latest entry to: addEntryToMyTopKKey
+ */
 public class TopkHelper {
     boolean isReadyForEntries=false;
     String topKKeyName="topk:popularPrompts";//can be overridden for each instance of this class

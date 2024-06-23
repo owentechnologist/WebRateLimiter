@@ -6,14 +6,17 @@ import redis.clients.jedis.timeseries.TSCreateParams;
 import java.util.HashMap;
 import java.util.Map;
 
+/*
+This implementation offers a 'shared label' by which many keys can be queried together
+It also offers a 'custom label' by which the results can be grouped and distinguished
+You may wish to add additional custom labels - to express more variance in the samples
+ */
 public class TimeSeriesEventLogger {
 
-    static final String COUNTING_TOKENS_USED = "countingTokensUsed";
-    static final String DURATION_IN_MILLISECONDS = "durationInMilliseconds";
     JedisPooled jedis = null;
     String tsKeyName = null;
     String customLabel = null; //countingTokensUsed,durationInMilliseconds
-    String sharedLabel = "javaLLMVSS";
+    String sharedLabel = "groupLabel"; // just a default - feel free to override
     boolean isReadyForEvents = false;
 
     public TimeSeriesEventLogger setSharedLabel(String label){
@@ -37,6 +40,8 @@ public class TimeSeriesEventLogger {
         }
         if(!jedis.exists(tsKeyName)) {
             jedis.tsCreate(tsKeyName, TSCreateParams.createParams().labels(map));
+        }else{
+            System.out.println("\t[debug] initTS() printing last recorded entry from "+tsKeyName+"  --> "+jedis.tsGet(tsKeyName));
         }
         isReadyForEvents=true;
         return this;

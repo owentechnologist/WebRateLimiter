@@ -45,15 +45,15 @@ Another dedups the entries made by users so the spellchecking/lookup/search effo
 The last service does the search lookup using phonetic and fuzzy matching to grab the closest match and writes the best match to a stream.
 
 To run the example:
-* build the project in an environment supporting Maven (getting the jars manually is a pain)
-* edit the jedisconnectionfactory.properties file to match your Redis Server details
+* plan to run the project in an environment supporting Maven (getting the jars manually is a pain)
+* provide the -h < host > and -p < port > and optional -s < password > as you kick it off
   (make sure your redis instance supports the TimeSeries, Search, and Blooom modules)
 
 ```
 mvn compile exec:java -Dexec.cleanupDaemonThreads=false -h <redishost> -p <redisport> -s <redispass> 
 ```
 
-If you want to have each of the 4 services started with a lengthy pause between them you can pass an argument to the Main.main method like this:
+If you want to have each of the 4 services started with a lengthy pause between them you can pass the 'goslow' argument to the Main.main method like this:
 
 ``` 
 mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow -h <redishost> -p <redisport> -s <redispass>"
@@ -67,6 +67,8 @@ X:GBG*
 X:DED*
 X:BEST*
 z:rate*
+PM_UID*
+gbg*
 java.lang.Runtime*
 TOPK.LIST TOPK:WRL:TOP_TEN_SUBMITTED_CITY_NAMES
 history*
