@@ -43,7 +43,7 @@ import java.util.Arrays;
  * (if you are not running the browser on the same machine you must provide the proper host)
  * Example: http://192.168.1.59:4567?accountKey=007
  *
- * Adding any argument to the startup of this application deliberately causes a multi-minute delay
+ * Adding the argument 'goslow' to the startup of this application deliberately causes a multi-minute delay
  * in the startup of all the 4 services - simply to create a more interesting Time Series data set
  * mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow"
  */
@@ -75,13 +75,13 @@ public class Main {
     static void goSlow(){
         try {
             System.out.println("\n\nStarting 4 services with \n\tBIG \n\tpauses \n\tbetween \n\tthem \nfor TimeSeries fun...\n");
-            System.out.println("Expect to wait 4 + minutes before the app is fully ready...\n\n");
+            System.out.println("Expect to wait 2 + minutes before the app is fully ready...\n\n");
             DedupMain.main(null);
-            Thread.sleep(60000);
+            Thread.sleep(30000);
             DataSearchBootstrapMain.main(null);
-            Thread.sleep(90000);
+            Thread.sleep(60000);
             BestMatchMain.main(null);
-            Thread.sleep(120000);
+            Thread.sleep(30000);
             WebRateLimitService service = WebRateLimitService.getInstance();
         }catch(Throwable t){}//Thread sleep is considered risky...
     }

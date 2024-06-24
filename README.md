@@ -7,6 +7,21 @@ https://github.com/maguec/RateLimitingExample/tree/sliding_window
 
 This is a Java code example of limiting number of requests to a webserver using Redis SortedSets API
 
+Each accountKey coming from a particular IP address is allowed X requests/minute and Y requests/hour
+
+These limits are defined in WebRateLimitService.java:
+
+    int ratePerMinuteAllowed = 5;
+    int ratePerHourAllowed = 25;
+
+Hit the webserver a few times with requests with the same accountKey to see the response change from a friendly welcome to a friendly -- too many requests.
+
+Due to the use of zremrangeByScore and the score being equal to the time the request occurred, the application does a good job
+of providing a sliding window of allowed requests.
+
+
+![slidingwindow](SortedSetSlidingWindow.png)
+
 This example embeds a Java webserver ( https://sparkjava.com/documentation ) 
 
 #### This web-app is the front end of a micro-services demo involving a deduper and a search lookup.
@@ -23,7 +38,7 @@ Behind the scenes: by two separate microservices (in an asynchronous fashion) -t
 
 ![asyncflow](asynchronousflow.png)
 
-The premise of the overall demo is - spell check / cleanse submitted city names.
+The premise of the overall demo is - spell check / cleanse submitted city names. The best match is added to the X:BEST_MATCHED_CITY_NAMES_BY_SEARCH stream for processing by an out-of-scope service that will use the information to search and replace entries in a large-scale data cleansing routine. 
 
 Reference [good] City address data is loaded from a csv file populated with data from a free data set provided by: https://simplemaps.com/
 
@@ -58,7 +73,7 @@ If you want to have each of the 4 services started with a lengthy pause between 
 ``` 
 mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow -h <redishost> -p <redisport> -s <redispass>"
 ```
-(you will have to wait 4 + minutes for the full launch in this case)
+(you will have to wait 2 + minutes for the full launch in this case)
 
 ### Additional Keys/commands to look into using RedisInsights:
 ```
@@ -81,17 +96,6 @@ Example ...  https://127.0.0.1:4567?accountKey=007
 
 The response will show how many requests have been made in the last minute and last hour.
 
-Each accountKey coming from a particular IP address is allowed 3 requests/minute and 25 requests/hour
-
-These limits are defined in WebRateLimitService.java:
-
-    int ratePerMinuteAllowed = 5;
-    int ratePerHourAllowed = 25;
-
-Hit the webserver a few times with requests with the same accountKey to see the response change from a friendly welcome to a friendly -- too many requests.
-
-Due to the use of zremrangeByScore and the score being equal to the time the request occurred, the application does a good job 
-of providing a sliding window of allowed requests.
 
 Each request made through the web-UI results in an entry being added to a redis stream that will be processed by various services. 
 
@@ -138,4 +142,19 @@ or redis-cli:
 18) "1611011864012"
 19) "z:rateLimiting:127.0.0.1:GET:accountKey=008:hour:17-17-45:347"
 20) "1611011865347"
+
+A small shell script is included in this project that calls the webserver using httpie
+
+
+NB: You must have httpie installed to use this effectvely
+
+https://httpie.io/docs/cli/installation
+
+https://httpie.io/docs/cli
+
+
+An example invocation is:
+```
+/littlewrlloader.sh 300 25
+```
 

@@ -96,6 +96,8 @@ public class WebRateLimitService {
 
         get("/cleaned-submissions", (req, res) -> (getResponseForCleanedSubmissions(req))+getLinks());
 
+        get("/upgrade", (req, res) -> (getResponseForUpgrade(req))+getLinks());
+
         get("/top10-submissions", (req, res) -> (getResponseForTop10Submissions(req))+getLinks());
 
         get("/delete-cuckoo-and-stream-data", (req, res) -> (getResponseForDeleteKeys(req))+getLinks());
@@ -117,9 +119,9 @@ public class WebRateLimitService {
     //responds with the top10 submitted city names this service has observed
     //Uses the TopK data structure and TopkHelper class
     static String getResponseForTop10Submissions(Request req){
-        String val = "<h1>Here is a list of the top 10 most requested City Names:</h1>";
+        String val = "<h1>Here is a list of the top 10 City Names submitted for cleansing:</h1>";
         val += "<table border=\"1\"><tr><th>CITY NAME REQUESTED</th><th>TIMES REQUESTED</th></tr>";
-        Map<String, Long> rMap = instance.topkHelper.getTopKlistWithCount(true);//we print topk to screen for debug
+        Map<String, Long> rMap = instance.topkHelper.getTopKlistWithCount(false);//we don't print topk to terminal for debug
         Iterator i = rMap.keySet().iterator();
         while (i.hasNext()) {
             String iKey = i.next().toString();
@@ -130,6 +132,11 @@ public class WebRateLimitService {
             val += "</td></tr>";
         }
         val += "</table>";
+        return val;
+    }
+
+    static String getResponseForUpgrade(Request req){
+        String val = "<h3>To upgrade your plan will cost:  <p/><h1>100 BILLION DOLLARS</h1></h3>";
         return val;
     }
 

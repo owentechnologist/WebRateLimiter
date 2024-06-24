@@ -63,21 +63,21 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
                     returnFields("city").limit(0,1).
                     setWithScores();
             SearchResult result = jedisPool.ftSearch(SharedConstants.citySearchIndex,query);
-            System.out.println("findBestMatch(cityName) "+result.getTotalResults());
+            //System.out.println("findBestMatch(cityName) "+result.getTotalResults());
             if((result.getTotalResults()>0)) {
-                System.out.println(result.getDocuments().get(0));
+                //System.out.println(result.getDocuments().get(0));
                 System.out.println("result.docs " + result.getDocuments().toArray()[0]);
                 Map<String, String> map = mapifyJSONRecord(result.getDocuments().toArray()[0].toString());
                 Object o = map.get("properties");
-                System.out.println("o.getClass() " + o.getClass());
+                //System.out.println("o.getClass() " + o.getClass());
                 Object ino = ((ArrayList<Object>)o).get(0);
-                System.out.println("ino.getClass() " + ino.getClass());
+                //System.out.println("ino.getClass() " + ino.getClass());
                 bestMatch = ((String)ino).split("=")[1];
                 //LinkedTreeMap<String, String> linkedTreeMap = (LinkedTreeMap<String, String>) o;
                 //System.out.println("linkedTreeMap.get(city)  " + linkedTreeMap.get("city"));
                 //bestMatch = linkedTreeMap.get("city");
                 score = ((Object)map.get("score")).toString(); //Returns a double for the score
-                System.out.println("Score for best Match is: "+score);
+                //System.out.println("Score for best Match is: "+score);
                 if(Float.parseFloat(score)>4.0) {
                     shouldAdd = true;
                     System.out.println("Adding a match to the cleaned cities (score better than 4.0)");
@@ -133,13 +133,13 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
             String[] nested = contents[x].split(":");
             for(int y=0;y<nested.length;y++) {
                 String currentToken = nested[y];
-                System.out.println("debug: currentToken == "+currentToken);
+                //System.out.println("debug: currentToken == "+currentToken);
                 String str = "";
                 if(nested[y].charAt(0)=='['){
                     //we have an array add the contents of the array as a single string
                     //insert " after the [ and before the ]
                     currentToken = nested[y];
-                    System.out.println("debug: currentToken [] == "+currentToken);
+                    //System.out.println("debug: currentToken [] == "+currentToken);
                     str = new StringBuilder(currentToken).insert(currentToken.length()-1, "\"").toString();
                     str = new StringBuilder(str).insert(1,"\"").toString();
                 }else{
@@ -147,7 +147,7 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
                     //wrap it in " front and back:
                     currentToken = nested[y];
                     str = "\""+currentToken.trim()+"\"";
-                    System.out.println("debug: currentToken == "+str);
+                    //System.out.println("debug: currentToken == "+str);
                 }
                 result += str;
                 if(result.charAt(result.length()-1)==']'){
@@ -163,7 +163,7 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
             }
         }
         result+="}";
-        System.out.println("attempt to jsonify..."+result);
+        //System.out.println("attempt to jsonify..."+result);
         return result;
     }
 

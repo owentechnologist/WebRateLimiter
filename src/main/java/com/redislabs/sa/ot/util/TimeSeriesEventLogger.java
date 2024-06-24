@@ -39,7 +39,7 @@ public class TimeSeriesEventLogger {
             map.put("customlabel", customLabel);
         }
         if(!jedis.exists(tsKeyName)) {
-            jedis.tsCreate(tsKeyName, TSCreateParams.createParams().labels(map));
+            jedis.tsCreate(tsKeyName, TSCreateParams.createParams().labels(map).retention(86400000l));
         }else{
             System.out.println("\t[debug] initTS() printing last recorded entry from "+tsKeyName+"  --> "+jedis.tsGet(tsKeyName));
         }
