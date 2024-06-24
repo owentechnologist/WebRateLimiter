@@ -24,7 +24,7 @@ of providing a sliding window of allowed requests.
 
 This example embeds a Java webserver ( https://sparkjava.com/documentation ) 
 
-#### This web-app is the front end of a micro-services demo involving a deduper and a search lookup.
+#### This web-app is the front end of a micro-services demo involving a deduper and a search lookup. Not mentioned in the following diagram is the use of <em>Strings</em> as expiring request tokens as well as <em>TopK</em> for reporting all incoming submissions for city name cleanup (including those that are not processed) 
 
 
 ![UI](multimodalRedis.png)
@@ -49,13 +49,13 @@ They all emit a heartbeat to redis TimeSeries every 10 seconds to show they are 
 Try this query:  
 
 ```
-TS.MRANGE - + AGGREGATION count 60000 FILTER measure=heartbeat GROUPBY servicename reduce avg 
+TS.MRANGE - + AGGREGATION count 30000 FILTER sharedlabel=heartbeat GROUPBY customlabel reduce avg 
 ```
 
 One service loads the redis database with Hashes containing Canadian city names and a nod to NY.
 It also creates the search index so that others can search for citynames.
 
-Another dedups the entries made by users so the spellchecking/lookup/search effort is done only one time for each unique entry. 
+Another service deduplicates the entries made by users so the spellchecking/lookup/search effort is assigned (added to the stream) only one time for each unique entry. 
 
 The last service does the search lookup using phonetic and fuzzy matching to grab the closest match and writes the best match to a stream.
 
@@ -71,9 +71,11 @@ mvn compile exec:java -Dexec.cleanupDaemonThreads=false -h <redishost> -p <redis
 If you want to have each of the 4 services started with a lengthy pause between them you can pass the 'goslow' argument to the Main.main method like this:
 
 ``` 
-mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="goslow -h <redishost> -p <redisport> -s <redispass>"
+mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="-h <redishost> -p <redisport> -s <redispass> goslow"
 ```
 (you will have to wait 2 + minutes for the full launch in this case)
+
+---
 
 ### Additional Keys/commands to look into using RedisInsights:
 ```
@@ -88,17 +90,20 @@ java.lang.Runtime*
 TOPK.LIST TOPK:WRL:TOP_TEN_SUBMITTED_CITY_NAMES
 history*
 ```
-
-## General information for the user:
+---
+## Usage information for the curious:
 From a browser use http://[host]:4567?accountKey=[yourKey]
 
 Example ...  https://127.0.0.1:4567?accountKey=007
 
-The response will show how many requests have been made in the last minute and last hour.
+Fill in the form and submit a mis-spelled city name - example: <em>brewklin</em>
 
+Note that the services that offer up a best guess for an improved result are asynchronous and their results are stored in the X:BEST_MATCHED_CITY_NAMES_BY_SEARCH stream as well as the various history* hashes you can find (it would be a simple and useful exercise to add a search index for these hashes - I leave this to the reader to accomplish)
+The response will show how many requests have been made in the last minute and last hour.
 
 Each request made through the web-UI results in an entry being added to a redis stream that will be processed by various services. 
 
+---
 
 To see what is happening in Redis you can use RedisInsight   https://redislabs.com/redis-enterprise/redis-insight/
 (look at the streams section to see entries being added to the streams)
@@ -143,7 +148,9 @@ or redis-cli:
 19) "z:rateLimiting:127.0.0.1:GET:accountKey=008:hour:17-17-45:347"
 20) "1611011865347"
 
-A small shell script is included in this project that calls the webserver using httpie
+---
+<h4>
+* A small shell script is included in this project that calls the webserver using httpie
 
 
 NB: You must have httpie installed to use this effectvely
