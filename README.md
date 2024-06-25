@@ -32,6 +32,12 @@ This example embeds a Java webserver ( https://sparkjava.com/documentation )
 
 ![UI](multimodalRedis.png)
 
+Note that this example uses a single Redis database for all datatypes and processing/querying behaviors. 
+
+While this is nifty and perfect for development, it would be advisable to separate the behaviors into independently scalable database instances where one acted as the rate limiter while another acted as the Deduper, TOPK, and TimeSeries repository and a third (maybe even a 4th) could act as the streams and search database(s). 
+
+All of these could either live in the same cluster allowing for a single management/monitoring endpoint - or not... This is where the 'it depends' conversations start.
+
 ![services](multimodalServices.png)
 
 The main flow of the application is driven by the user who submits possible city names for verification / correction:
