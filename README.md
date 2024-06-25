@@ -20,6 +20,9 @@ A Multi-modal Redis-based Application Showcasing:
 # Answer 3:
 NOT a performance-optimized example - please take what is useful and improve upon it for your particular needs
 
+TODO: Refactor/Provide a version of the microservices that utilize the Enterprise Streams library (example code found at the following link) 
+
+https://github.com/redis-field-engineering/streams-java-demo  
 ## <em>Description / Details of this WebRateLimiter and Redis Search application</em>
 
 This example embeds a Java webserver ( https://sparkjava.com/documentation )
