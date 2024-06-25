@@ -17,7 +17,10 @@ A Multi-modal Redis-based Application Showcasing:
 * Search indexes used to allow phonetic and fuzzy matching lookups
 * TopK used to remember the top 10 most frequently submitted misspelled entries
 
-### WebRateLimiter and Redis Search application
+# Answer 3:
+NOT a performance-optimized example - please take what is useful and improve upon it for your particular needs
+
+## <em>Description / Details of this WebRateLimiter and Redis Search application</em>
 
 This example embeds a Java webserver ( https://sparkjava.com/documentation )
 
