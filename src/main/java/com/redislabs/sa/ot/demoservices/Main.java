@@ -69,6 +69,9 @@ public class Main {
         DedupMain.main(null);
         DataSearchBootstrapMain.main(null);
         BestMatchMain.main(null);
+        try{
+            Thread.sleep(5000);
+        }catch(Throwable t){}
         WebRateLimitService service = WebRateLimitService.getInstance();
     }
 

@@ -9,7 +9,12 @@ variants=$2
 for ((i =0; i < iterations; i++)) do
     http get :4567/cleaned-submissions User-Agent:Mozilla/5.0 accountKey==0$(( i % variants))
     http get :4567/top10-submissions User-Agent:Mozilla/5.0 accountKey==0$(( i % variants/2))
-    http :4567/correct-city-spelling accountKey==00$(( i % variants)) uniqueRequestKey==PM_UID539526 city==tauranto
+    if [ $((iterations%2))==0 ]
+    then
+      http :4567/correct-city-spelling accountKey==00$(( i % variants)) uniqueRequestKey==PM_UID539526 city==tauranto
+    else
+      http :4567/correct-city-spelling accountKey==00$(( i % variants)) uniqueRequestKey==PM_UID539526 city==broowklean
+    fi
     sleep 1
 
 done

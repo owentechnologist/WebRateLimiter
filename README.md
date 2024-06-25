@@ -1,6 +1,60 @@
-# Multi-modal Redis-based Application with many features:
+* You will need an instance of Redis running Search, Bloom, and TimeSeries modules to run this example.
+* You can sign up for a free cloud instance here: https://redis.com/try-free/
+
+# Question: 
+What is this?
+
+# Answer 1:
+A Redis-powered, Web-based, Spell-Checking Application
+# Answer 2: 
+A Multi-modal Redis-based Application Showcasing:
+* Streams used to trigger execution of multiple microservices and remember their inputs
+* SortedSets used for Rate Limiting
+* TimeSeries used to monitor the heartbeats of 4 services
+* Hashes used to store reference data and results data
+* Strings used to act as expiring request tokens
+* Cuckoo Filters used to dedup incoming requests
+* Search indexes used to allow phonetic and fuzzy matching lookups
+* TopK used to remember the top 10 most frequently submitted misspelled entries
 
 ### WebRateLimiter and Redis Search application
+
+This example embeds a Java webserver ( https://sparkjava.com/documentation )
+
+#### This web-app is the front end of a micro-services demo involving a deduper and a search lookup. Not mentioned in the following diagram is the use of <em>Strings</em> as expiring request tokens as well as <em>TopK</em> for reporting all incoming submissions for city name cleanup (including those that are not processed)
+
+
+![UI](multimodalRedis.png)
+
+![services](multimodalServices.png)
+
+The main flow of the application is driven by the user who submits possible city names for verification / correction:
+![commonflow](commonflow.png)
+
+Behind the scenes: by two separate microservices (in an asynchronous fashion) -the requests are deduped and then processed through a redis search effort:
+
+![asyncflow](asynchronousflow.png)
+
+The premise of the overall demo is - spell check / cleanse submitted city names. The best match is added to the X:BEST_MATCHED_CITY_NAMES_BY_SEARCH stream for processing by an imaginary (out-of-scope) service that might use the information to search and replace entries in a large-scale data cleansing routine.
+
+Reference [good] City address data is loaded from a csv file populated with data from a free data set provided by: https://simplemaps.com/
+
+
+The various services are connected asynchronously through redis streams.
+
+They all emit a heartbeat to redis TimeSeries every 10 seconds to show they are healthy.
+Try this query:
+
+```
+TS.MRANGE - + AGGREGATION count 30000 FILTER sharedlabel=heartbeat GROUPBY customlabel reduce avg 
+```
+
+One service loads the redis database with Hashes containing Canadian city names and a nod to NY.
+It also creates the search index so that others can search for citynames.
+
+Another service deduplicates the entries made by users so the spellchecking/lookup/search effort is assigned (added to the stream) only one time for each unique entry.
+
+The last service does the search lookup using phonetic and fuzzy matching to grab the closest match and writes the best match to a stream.
 
 ### The sliding window rate limiter pattern used in this app is borrowed from this python example available here:
 https://github.com/maguec/RateLimitingExample/tree/sliding_window
@@ -21,43 +75,6 @@ of providing a sliding window of allowed requests.
 
 
 ![slidingwindow](SortedSetSlidingWindow.png)
-
-This example embeds a Java webserver ( https://sparkjava.com/documentation ) 
-
-#### This web-app is the front end of a micro-services demo involving a deduper and a search lookup. Not mentioned in the following diagram is the use of <em>Strings</em> as expiring request tokens as well as <em>TopK</em> for reporting all incoming submissions for city name cleanup (including those that are not processed) 
-
-
-![UI](multimodalRedis.png)
-
-![services](multimodalServices.png)
-
-The main flow of the application is driven by the user who submits possible city names for verification / correction:
-![commonflow](commonflow.png)
-
-Behind the scenes: by two separate microservices (in an asynchronous fashion) -the requests are deduped and then processed through a redis search effort:
-
-![asyncflow](asynchronousflow.png)
-
-The premise of the overall demo is - spell check / cleanse submitted city names. The best match is added to the X:BEST_MATCHED_CITY_NAMES_BY_SEARCH stream for processing by an out-of-scope service that will use the information to search and replace entries in a large-scale data cleansing routine. 
-
-Reference [good] City address data is loaded from a csv file populated with data from a free data set provided by: https://simplemaps.com/
-
-
-The various services are connected asynchronously through redis streams.
-
-They all emit a heartbeat to redis TimeSeries every 10 seconds to show they are healthy.
-Try this query:  
-
-```
-TS.MRANGE - + AGGREGATION count 30000 FILTER sharedlabel=heartbeat GROUPBY customlabel reduce avg 
-```
-
-One service loads the redis database with Hashes containing Canadian city names and a nod to NY.
-It also creates the search index so that others can search for citynames.
-
-Another service deduplicates the entries made by users so the spellchecking/lookup/search effort is assigned (added to the stream) only one time for each unique entry. 
-
-The last service does the search lookup using phonetic and fuzzy matching to grab the closest match and writes the best match to a stream.
 
 To run the example:
 * plan to run the project in an environment supporting Maven (getting the jars manually is a pain)
