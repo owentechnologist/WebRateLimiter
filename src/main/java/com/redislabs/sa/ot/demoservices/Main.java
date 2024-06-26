@@ -65,7 +65,17 @@ public class Main {
         System.out.println(("Example 3... http://127.0.0.1:4567/cleaned-submissions?accountKey=007"));
     }
 
+    static void xtrimUnneededStreamHistory(){
+        try{
+            System.out.println("\n Main.xtrimUnneededStreamHistory() called...");
+            jedisPool.xtrim(SharedConstants.dedupedCityNameRequests,0,false);
+            jedisPool.xtrim(SharedConstants.GARBAGE_CITY_STREAM_NAME,0,false);
+            System.out.println("Main.xtrimUnneededStreamHistory() completed...");
+        }catch(Throwable t){}
+    }
+
     static void goFast(){
+        xtrimUnneededStreamHistory();
         DedupMain.main(null);
         DataSearchBootstrapMain.main(null);
         BestMatchMain.main(null);
@@ -76,6 +86,7 @@ public class Main {
     }
 
     static void goSlow(){
+        xtrimUnneededStreamHistory();
         try {
             System.out.println("\n\nStarting 4 services with \n\tBIG \n\tpauses \n\tbetween \n\tthem \nfor TimeSeries fun...\n");
             System.out.println("Expect to wait 2 + minutes before the app is fully ready...\n\n");
