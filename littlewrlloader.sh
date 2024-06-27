@@ -14,7 +14,7 @@ for ((i =0; i < iterations; i++)) do
     if [ $((iterations%2))==0 ]
     then
       http :4567/correct-city-spelling accountKey==11151977 uniqueRequestKey==PM_UID5 city==fredreick
-      http :4567/correct-city-spelling accountKey==00$(( i % variants)) uniqueRequestKey==PM_UID20 city==tauranto
+      http :4567/correct-city-spelling accountKey==00$(( i % variants)) uniqueRequestKey==PM_UID20 city==toranto
     else
       http :4567/correct-city-spelling accountKey==00$(( i % variants)) uniqueRequestKey==PM_UID10 city==kweens
     fi

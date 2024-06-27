@@ -108,6 +108,7 @@ mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="-h <redisho
 
 ### Additional Keys/commands to look into using RedisInsights:
 ```
+CF.EXISTS CF_BAD_SPELLING_SUBMISSIONS brewklin
 city*
 X:GBG*
 X:DED*
