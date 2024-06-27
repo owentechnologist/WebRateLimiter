@@ -33,10 +33,15 @@ public class WebRateLimitService {
 
     int ratePerMinuteAllowed = 5;
     int ratePerHourAllowed = 25;
-    TopkHelper topkHelper = new TopkHelper().
+    String specialAccount="11151977";
+    TopkHelper topkCityNameHelper = new TopkHelper().
             setJedis(jedisPool).
             setTopKSize(10).
             setTopKKeyNameForMyLog("TOPK:WRL:TOP_TEN_SUBMITTED_CITY_NAMES");
+    TopkHelper topkAcctIDHelper = new TopkHelper().
+            setJedis(jedisPool).
+            setTopKSize(10).
+            setTopKKeyNameForMyLog("TOPK:WRL:TOP_TEN_BUSIEST_ACCOUNTS");
 
     private static WebRateLimitService instance = new WebRateLimitService();
     public static WebRateLimitService getInstance(){ return instance; }
@@ -45,12 +50,14 @@ public class WebRateLimitService {
         //The following requires the presence of an active Redis TimeSeries module:
         /*
         Use commands like these to see what is being posted to the timeseries:
-        TS.MRANGE - + AGGREGATION avg 2 FILTER measure=heartbeat
+        TS.MRANGE - + AGGREGATION avg 60 FILTER sharedlabel=heartbeat
+        TS.MRANGE - + AGGREGATION count 60000 FILTER sharedlabel=heartbeat GROUPBY customlabel reduce avg
         TS.RANGE TS:com.redislabs.sa.ot.webRateLimiter.WebRateLimitService - + AGGREGATION avg 2
          */
         TimeSeriesHeartBeatEmitter heartBeatEmitter = new TimeSeriesHeartBeatEmitter(jedisPool,WebRateLimitService.class.getCanonicalName());
         try{
-            topkHelper.initTopK();
+            topkCityNameHelper.initTopK();
+            topkAcctIDHelper.initTopK();
         }catch(redis.clients.jedis.exceptions.JedisDataException jde){
             jde.getMessage();
         }
@@ -72,8 +79,9 @@ public class WebRateLimitService {
             String requestMethod = request.requestMethod();
             String requestIP = request.ip();
             String queryString = request.queryString();
+            RateLimitRecord record = instance.buildRateLimitRecord(requestMethod, requestIP, queryString);
+            instance.topkAcctIDHelper.addEntryToMyTopKKey(record.getAccountIDString());
             if(!queryString.contains("uniqueRequestKey")) {
-                RateLimitRecord record = instance.buildRateLimitRecord(requestMethod, requestIP, queryString);
                 System.out.println("Before() called... Query String: " + queryString);
                 if (queryString.contains("accountKey")) {
                     isIdentified = true;
@@ -98,6 +106,8 @@ public class WebRateLimitService {
 
         get("/upgrade", (req, res) -> (getResponseForUpgrade(req))+getLinks());
 
+        get("/top10-accounts", (req, res) -> (getResponseForTop10Accounts(req))+getLinks());
+
         get("/top10-submissions", (req, res) -> (getResponseForTop10Submissions(req))+getLinks());
 
         get("/delete-cuckoo-and-stream-data", (req, res) -> (getResponseForDeleteKeys(req))+getLinks());
@@ -121,7 +131,7 @@ public class WebRateLimitService {
     static String getResponseForTop10Submissions(Request req){
         String val = "<h1>Here is a list of the top 10 City Names submitted for cleansing:</h1>";
         val += "<table border=\"1\"><tr><th>CITY NAME REQUESTED</th><th>TIMES REQUESTED</th></tr>";
-        Map<String, Long> rMap = instance.topkHelper.getTopKlistWithCount(false);//we don't print topk to terminal for debug
+        Map<String, Long> rMap = instance.topkCityNameHelper.getTopKlistWithCount(false);//we don't print topk to terminal for debug
         Iterator i = rMap.keySet().iterator();
         while (i.hasNext()) {
             String iKey = i.next().toString();
@@ -135,8 +145,28 @@ public class WebRateLimitService {
         return val;
     }
 
+    //responds with the top10 busiest AcctIDs this service has observed
+    //Uses the TopK data structure and TopkHelper class
+    static String getResponseForTop10Accounts(Request req){
+        String val = "<h1>Here is a list of the top 10 Busiest Accounts:</h1>";
+        val += "<table border=\"1\"><tr><th>ACCOUNT ID USED</th><th>TIMES UTILIZED</th></tr>";
+        Map<String, Long> rMap = instance.topkAcctIDHelper.getTopKlistWithCount(false);//we don't print topk to terminal for debug
+        Iterator i = rMap.keySet().iterator();
+        while (i.hasNext()) {
+            String iKey = i.next().toString();
+            val += "<tr><td>";
+            val += iKey;
+            val += "</td><td>&nbsp;&nbsp;&nbsp;&nbsp;";
+            val += rMap.get(iKey);
+            val += "</td></tr>";
+        }
+        val += "</table>";
+        return val;
+    }
+
+    //invoke like this: http://localhost:4567?upgrade?accountKey=<yourkey>
     static String getResponseForUpgrade(Request req){
-        String val = "<h3>To upgrade your plan will cost:  <p/><h1>100 BILLION DOLLARS</h1></h3>";
+        String val = "<h3>Your plan has been upgraded:  <p/><em>From now on - Please use Your NEW AccountID: <h1>11151977</h1></em><p />Your account has been billed for</em>><p/><h1>$100 BILLION DOLLARS</h1></h3>";
         return val;
     }
 
@@ -145,7 +175,7 @@ public class WebRateLimitService {
     static String getResponseForDeleteKeys(Request req) {
         String val = "<h1>Cuckoo Filters and Stream Data used by this application have been deleted.</h1>";
 
-        if(req.queryString().contains("11151977")) {
+        if(req.queryString().contains(instance.specialAccount)) {
             String[] deleteMe = new String[]{"X:GBG:CITY", "X:BEST_MATCHED_CITY_NAMES_BY_SEARCH",
                     "X:DEDUPED_CITY_NAME_SPELLCHECK_REQUESTS", "CF_BAD_SPELLING_SUBMISSIONS", "CF_BEST_MATCH_SUBMISSIONS",
                     "CF_CITIES_LIST"
@@ -156,7 +186,7 @@ public class WebRateLimitService {
                 val += "<p><b><h2>" + t.getMessage() + "</h2></b></p>";
             }
         }else{
-            val = "<p><b><h2>Hold on a minute!<br>Only Account Holder 11151977 is authorized to use this link!</br></h2></b></p>";
+            val = "<p><b><h2>Hold on a minute!<br>Only Account Holder "+instance.specialAccount+" is authorized to use this link!</br></h2></b></p>";
         }
         return val;
     }
@@ -172,8 +202,10 @@ public class WebRateLimitService {
         return
                 "<p /><a href=\"http://localhost:4567?"+queryString+"\">RequestAnother?</a>"+
                 "<p /><a href=\"http://localhost:4567/cleaned-submissions?"+queryString+"\">See all Submissions?</a>"+
+                "<p /><a href=\"http://localhost:4567/top10-accounts?"+queryString+"\">Retrieve the top 10 Busiest Accounts?</a>"+
                 "<p /><a href=\"http://localhost:4567/top10-submissions?"+queryString+"\">Retrieve the top 10 Submissions?</a>"+
-                "<p /><a href=\"http://localhost:4567/delete-cuckoo-and-stream-data?"+queryString+"\">delete-cuckoo-and-stream-data?</a>"
+                "<p /><a href=\"http://localhost:4567/delete-cuckoo-and-stream-data?"+queryString+"\">delete-cuckoo-and-stream-data?</a>"+
+                "<p /><a href=\"http://localhost:4567/upgrade?"+queryString+"\">Upgrade your plan?</a>"
                 ;
     }
 
@@ -205,12 +237,17 @@ public class WebRateLimitService {
     }
 
     static String getResponseForRootPath(Request req){
-        String val ="Ahhh - of course it's you: </p>" +
+        RateLimitRecord rateLimitRecord = instance.buildRateLimitRecord(req.requestMethod(),req.ip(),req.queryString());
+        String val ="";
+        if(rateLimitRecord.getAccountIDString().equalsIgnoreCase(instance.specialAccount)){
+            val+="<h1><b>You are a diamond account and have unlimited requests!</b></p></h1>";
+        }
+        val+=
                 "<h3>"+req.ip()+":"+req.requestMethod()+":"+req.queryString()+ "</h3> " +
                 "</br> <em>During the past minute you have issued <b>"+
-                instance.countRequestsThisMinute(instance.buildRateLimitRecord(req.requestMethod(),req.ip(),req.queryString()))+
+                instance.countRequestsThisMinute(rateLimitRecord)+
                 "</b> requests.</em></br> <em>During the past hour you have issued <b>"+
-                instance.countRequestsThisHour(instance.buildRateLimitRecord(req.requestMethod(),req.ip(),req.queryString()))+
+                instance.countRequestsThisHour(rateLimitRecord)+
                 "</b> requests.</em></br> <h1>It is good to serve you again!</h1>" +
                 "<p />Use this code to submit your request:<br />"+
                 "<p />You have 30 seconds before your code expires.<p />" +
@@ -248,12 +285,17 @@ public class WebRateLimitService {
         dummyLog("There have been "+rpm+" requests from "+record.getRateLimitKeyBase()+" in the last minute");
         dummyLog("There have been "+rph+" requests from "+record.getRateLimitKeyBase()+" in the last hour");
         boolean isAboveAllowedRateLimit = false;
+        String acctID = record.getAccountIDString();
+        dummyLog("\trecord.getAccountIDString(): "+record.getAccountIDString());
+        if(record.getAccountIDString().equalsIgnoreCase(instance.specialAccount)){
+            rpm=0;rph=0;
+        }
         if(rpm > this.ratePerMinuteAllowed){
             record.setMessage("<b>You have used all your available requests for this minute!</b></p> You issued this many requests this minute: "+rpm+"</br></p><em>Sing the ABC song and try again</em>");
         }
         if(rph > this.ratePerHourAllowed){
             record.setMessage("<b>You have used all your available requests for this hour!</b></p> You issued this many requests this hour: "+rph+"</br></p><em>This could take a while...</em>" +
-                    "</p><a href=\"/upgrade\">UPGRADE YOUR PLAN NOW!</a>");
+                    "</p>UPGRADE YOUR PLAN NOW USING THE LINK BELOW!</a>");
         }
         if(rpm > this.ratePerMinuteAllowed || rph > this.ratePerHourAllowed){
             isAboveAllowedRateLimit = true;
@@ -264,7 +306,7 @@ public class WebRateLimitService {
     private String submitCity(String requestKey,String city){
         dummyLog("submitCity() called... args: "+requestKey+" , "+city);
         String response ="<p />Your submission of "+city+" is processing!";
-        topkHelper.addEntryToMyTopKKey(city);
+        topkCityNameHelper.addEntryToMyTopKKey(city);
         if(jedisPool.exists(requestKey)) {
             jedisPool.del(requestKey); // only one request / key allowed!
             jedisPool.set("gbg:submissions:slidingyear:"+city,city,new SetParams().ex(31536000));
@@ -283,7 +325,7 @@ public class WebRateLimitService {
     private String getBusinessRequestKey(){
         String uniqueKeyName = "";
         instance.dummyLog("getRequestKey() connection ==  "+jedisPool);
-        uniqueKeyName= "PM_UID"+System.nanoTime()%1000000;
+        uniqueKeyName= "PM_UID"+System.nanoTime()%25; // deliberately making it easy to occasionally match this
         jedisPool.set(uniqueKeyName,"APPROVED",new SetParams().ex(30));
         instance.dummyLog("getRequestKey()  "+uniqueKeyName);
         return uniqueKeyName;

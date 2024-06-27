@@ -12,12 +12,16 @@ public class RateLimitRecord {
     private String rateLimitKeyBase = null;
     private String uniqueRequestKey = "";
     private String message = "You should never see this message like this!";
+    private String acctID = "INVALID"; // acctID determines class / priority
 
     public RateLimitRecord(String rateLimitKey) {
         minuteLimitKey = rateLimitKey + ":minute";
         hourLimitKey = rateLimitKey + ":hour";
         rateLimitKeyBase = rateLimitKey;
+        acctID = rateLimitKey.split("accountKey=")[1];
+        acctID = acctID.split("&")[0];
     }
+    public String getAccountIDString(){return this.acctID;}
     public String getRateLimitKeyBase(){return this.rateLimitKeyBase;}
     public String getMinuteLimitKey(){return this.minuteLimitKey;}
     public String getHourLimitKey(){return this.hourLimitKey;}
