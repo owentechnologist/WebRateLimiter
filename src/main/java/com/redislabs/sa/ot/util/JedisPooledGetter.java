@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class JedisPooledGetter {
+
     private JedisPooled jedis=null;
 
     public JedisPooledGetter(String[]args){

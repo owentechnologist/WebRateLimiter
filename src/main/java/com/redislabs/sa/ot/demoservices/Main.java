@@ -49,8 +49,10 @@ import java.util.Arrays;
  */
 public class Main {
     public static JedisPooled jedisPool = null;
+    public static String[] startupArgs;
     public static void main(String[] args){
-        JedisPooledGetter jedisPooledGetter = new JedisPooledGetter(args);
+        startupArgs=args;
+        JedisPooledGetter jedisPooledGetter = new JedisPooledGetter(startupArgs);
         jedisPool=jedisPooledGetter.getJedisPooled();
         ArrayList<String> arrayListArgs = new ArrayList<String>(Arrays.asList(args));
         if(arrayListArgs.contains("goslow")){

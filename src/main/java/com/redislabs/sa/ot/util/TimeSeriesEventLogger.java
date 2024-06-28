@@ -1,5 +1,6 @@
 package com.redislabs.sa.ot.util;
 
+import com.redislabs.sa.ot.demoservices.Main;
 import redis.clients.jedis.JedisPooled;
 import redis.clients.jedis.timeseries.TSCreateParams;
 
@@ -61,6 +62,10 @@ public class TimeSeriesEventLogger {
         if((!isReadyForEvents)&&(!jedis.exists(tsKeyName))){
             initTS();
         }
-        jedis.tsAdd(tsKeyName,val);
+        try {
+            jedis.tsAdd(tsKeyName, val);
+        }catch(redis.clients.jedis.exceptions.JedisConnectionException jce){
+            jedis = new JedisPooledGetter(Main.startupArgs).getJedisPooled();
+        }
     }
 }
