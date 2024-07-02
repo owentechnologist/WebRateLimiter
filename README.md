@@ -119,6 +119,7 @@ gbg*
 java.lang.Runtime*
 TOPK.LIST TOPK:WRL:TOP_TEN_SUBMITTED_CITY_NAMES
 history*
+FT.SEARCH IDX_cities "@geopoint:[-123.04803,49.73259, 20 km]" LIMIT 0 2
 ```
 ---
 ## Usage information for the curious:
@@ -195,3 +196,4 @@ An example invocation is:
 /littlewrlloader.sh 300 25
 ```
 </h4>
+
