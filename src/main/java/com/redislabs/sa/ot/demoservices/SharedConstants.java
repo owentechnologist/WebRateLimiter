@@ -11,5 +11,6 @@ public class SharedConstants {
     public static final String citySearchIndex = "IDX_cities";
     public static final String cfIndexName = "CF_BEST_MATCH_SUBMISSIONS";
     public static final String cfCitiesList = "CF_CITIES_LIST";
+    public static final String WEB_LISTENER_PORT = "weblistenerport";
 
 }

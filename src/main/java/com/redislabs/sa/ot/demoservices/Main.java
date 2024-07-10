@@ -62,9 +62,9 @@ public class Main {
         }
         System.out.println("Kicked Off Webserver listening on port 4567");
         System.out.println("To test your rate limiting ... use http://[host]:4567?accountKey=[yourKey]");
-        System.out.println("Example ...  http://127.0.0.1:4567?accountKey=007");
-        System.out.println("Example2 ...  http://192.168.1.59:4567?accountKey=007");
-        System.out.println(("Example 3... http://127.0.0.1:4567/cleaned-submissions?accountKey=007"));
+        System.out.println("Example ...  http://127.0.0.1:"+WebRateLimitService.getInstance().weblistenerPort+"?accountKey=007");
+        System.out.println("Example2 ...  http://192.168.1.59:"+WebRateLimitService.getInstance().weblistenerPort+"?accountKey=007");
+        System.out.println(("Example 3... http://127.0.0.1:"+WebRateLimitService.getInstance().weblistenerPort+"/cleaned-submissions?accountKey=007"));
     }
 
     static void xtrimUnneededStreamHistory(){

@@ -3,6 +3,8 @@ import static com.redislabs.sa.ot.demoservices.Main.jedisPool;
 import static com.redislabs.sa.ot.demoservices.SharedConstants.*;
 import static spark.Spark.*;
 
+import com.redislabs.sa.ot.demoservices.Main;
+import com.redislabs.sa.ot.demoservices.SharedConstants;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
 import com.redislabs.sa.ot.util.TopkHelper;
 import redis.clients.jedis.StreamEntryID;
@@ -10,10 +12,7 @@ import redis.clients.jedis.params.SetParams;
 import redis.clients.jedis.resps.StreamEntry;
 import spark.Request;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 //NB: this class uses SparkJava -a simple embedded web server
 //Documentation for SparkJava can be found here:
@@ -31,6 +30,7 @@ Two things make this web-application less likely to suffer abuse:
 
 public class WebRateLimitService {
 
+    public int weblistenerPort=4567;
     int ratePerMinuteAllowed = 5;
     int ratePerHourAllowed = 25;
     String specialAccount="11151977";
@@ -43,7 +43,7 @@ public class WebRateLimitService {
             setTopKSize(10).
             setTopKKeyNameForMyLog("TOPK:WRL:TOP_TEN_BUSIEST_ACCOUNTS");
 
-    private static WebRateLimitService instance = new WebRateLimitService();
+    private static WebRateLimitService instance =  new WebRateLimitService();
     public static WebRateLimitService getInstance(){ return instance; }
 
     private WebRateLimitService() {
@@ -63,15 +63,28 @@ public class WebRateLimitService {
         }
     }
 
+    private static void assignPort(){
+        ArrayList<String> arrayListArgs = new ArrayList<String>(Arrays.asList(Main.startupArgs));
+        if(arrayListArgs.contains(SharedConstants.WEB_LISTENER_PORT)){
+            String listenPort =
+              arrayListArgs.get(1+(arrayListArgs.indexOf(SharedConstants.WEB_LISTENER_PORT)));
+            getInstance().weblistenerPort=Integer.parseInt(listenPort);
+            port(getInstance().weblistenerPort);
+        }else{
+            port(getInstance().weblistenerPort);//should be default of 4567
+        }
+    }
+
     private static void restartWebRateLimitService(){
         stop();
+        assignPort();
         init();
     }
 
 
     static{
-        init(); //starts the webserver listening on port 4567
-
+        assignPort(); //default is listening on port 4567
+        init(); //starts the webserver
         before((request, response) -> {
             //checks request for both an 'accountKey' (which helps us recognize and track our accounts) and
             //uses Redis Sorted Sets to count the # of requests made by that account in the past minute and hour
@@ -93,7 +106,7 @@ public class WebRateLimitService {
                 }
                 if (!isIdentified) {
                     System.out.println("you submitted: " + queryString);
-                    halt(401, "You must use an accountKey example:    http://127.0.0.1:4567?accountKey=007");
+                    halt(401, "You must use an accountKey example:    http://127.0.0.1:"+getInstance().weblistenerPort+"?accountKey=007");
                 }
             }
         });
@@ -200,12 +213,12 @@ public class WebRateLimitService {
     static String getLinks(){
         String queryString =getQueryStringFromRedis();
         return
-                "<p /><a href=\"http://localhost:4567?"+queryString+"\">RequestAnother?</a>"+
-                "<p /><a href=\"http://localhost:4567/cleaned-submissions?"+queryString+"\">See all Submissions?</a>"+
-                "<p /><a href=\"http://localhost:4567/top10-accounts?"+queryString+"\">Retrieve the top 10 Busiest Accounts?</a>"+
-                "<p /><a href=\"http://localhost:4567/top10-submissions?"+queryString+"\">Retrieve the top 10 Submissions?</a>"+
-                "<p /><a href=\"http://localhost:4567/delete-cuckoo-and-stream-data?"+queryString+"\">delete-cuckoo-and-stream-data?</a>"+
-                "<p /><a href=\"http://localhost:4567/upgrade?"+queryString+"\">Upgrade your plan?</a>"
+                "<p /><a href=\"http://localhost:"+getInstance().weblistenerPort+"?"+queryString+"\">RequestAnother?</a>"+
+                "<p /><a href=\"http://localhost:"+getInstance().weblistenerPort+"/cleaned-submissions?"+queryString+"\">See all Submissions?</a>"+
+                "<p /><a href=\"http://localhost:"+getInstance().weblistenerPort+"/top10-accounts?"+queryString+"\">Retrieve the top 10 Busiest Accounts?</a>"+
+                "<p /><a href=\"http://localhost:"+getInstance().weblistenerPort+"/top10-submissions?"+queryString+"\">Retrieve the top 10 Submissions?</a>"+
+                "<p /><a href=\"http://localhost:"+getInstance().weblistenerPort+"/delete-cuckoo-and-stream-data?"+queryString+"\">delete-cuckoo-and-stream-data?</a>"+
+                "<p /><a href=\"http://localhost:"+getInstance().weblistenerPort+"/upgrade?"+queryString+"\">Upgrade your plan?</a>"
                 ;
     }
 
