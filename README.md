@@ -11,7 +11,8 @@ A Multi-modal Redis-based Application Showcasing:
 * Streams used to trigger execution of multiple microservices and remember their inputs
 * SortedSets used for Rate Limiting
 * TimeSeries used to monitor the heartbeats of 4 services
-* Hashes used to store reference data and results data
+* Hashes used to store reference data
+* JSON used to store submission history and results data  
 * Strings used to act as expiring request tokens
 * Cuckoo Filters used to dedup incoming requests
 * Search indexes used to allow phonetic and fuzzy matching lookups

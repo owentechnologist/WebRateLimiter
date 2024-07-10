@@ -1,5 +1,6 @@
 package com.redislabs.sa.ot.util;
 
+import com.redislabs.sa.ot.demoservices.Main;
 import redis.clients.jedis.JedisPooled;
 import redis.clients.jedis.StreamEntryID;
 import redis.clients.jedis.params.XReadGroupParams;
@@ -96,8 +97,20 @@ public class RedisStreamAdapter {
                             streamQuery.put(streamName,nextID);
                             XReadParams xReadParams = new XReadParams().block(Integer.MAX_VALUE).count(1);
                             //HashMap<String,StreamEntryID> targetStreams = new HashMap<String,StreamEntryID>(){{}}
-                            List<Map.Entry<String, List<StreamEntry>>> streamResult =
-                                    jedisPooled.xread(xReadParams, streamQuery);
+                            List<Map.Entry<String, List<StreamEntry>>> streamResult = null;
+                            try {
+                                streamResult = jedisPooled.xread(xReadParams, streamQuery);
+                            }catch(redis.clients.jedis.exceptions.JedisConnectionException jce){
+                                boolean unhealthy = true;
+                                while(unhealthy){
+                                    // the Thread sleep below enforces a fixed 3 second pause between attempts:
+                                    try{ Thread.sleep(3000);}catch(InterruptedException ie){ /*do nothing*/}
+                                    jedisPooled = new JedisPooledGetter(Main.startupArgs).getJedisPooled();
+                                    if(jedisPooled.ping().equalsIgnoreCase("pong")){
+                                        unhealthy=false;
+                                    }
+                                }
+                            }
                             key = streamResult.get(0).getKey(); // name of Stream
                             streamEntryList = streamResult.get(0).getValue(); // we assume simple use of stream with a single update
 

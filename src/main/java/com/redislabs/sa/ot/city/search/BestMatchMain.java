@@ -5,7 +5,9 @@ import com.redislabs.sa.ot.demoservices.SharedConstants;
 import com.redislabs.sa.ot.util.StreamEventMapProcessor;
 import com.redislabs.sa.ot.util.RedisStreamAdapter;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
+import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.StreamEntryID;
+import redis.clients.jedis.json.Path2;
 import redis.clients.jedis.search.Query;
 import redis.clients.jedis.search.SearchResult;
 import redis.clients.jedis.resps.StreamEntry;
@@ -103,9 +105,7 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
                 }
             }
         }catch(Throwable t){t.printStackTrace();}
-        if(shouldAdd){
-            addBestMatchToHistory(cityName,bestMatch,score);
-        }
+        addMatchToHistory(cityName,bestMatch,score);
         return bestMatch;
     }
 
@@ -118,10 +118,27 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
     // note that due to the deduping logic using Cuckoo filters we should never
     // see the same cityNameProvided show up more than one time
     // if we do, there has been an unwanted collision
-    private void addBestMatchToHistory(String cityNameProvided,String bestMatchFound,String score) {
-        Map<String,String> values = new HashMap<String,String>();
-        values.put(cityNameProvided,score);
-        jedisPool.hset("history:unnecessarybuteducational:"+bestMatchFound,values);
+    private void addMatchToHistory(String cityNameProvided, String bestMatchFound, String score) {
+        System.out.println("\taddMatchToHistory() --> start");
+        //Map<String, String> values = new HashMap<String, String>();
+        String keyname = "history:citynames:gbg_submitted:" + bestMatchFound;
+        //values.put(cityNameProvided, score);
+        if (!jedisPool.exists(keyname)) {
+            //System.out.println("\taddMatchToHistory() --> adding new JSON object: "+keyname);
+            Map<String, Object> hm = new HashMap<>();
+            Map<String, Object> cityNamesSubmitted = new HashMap<>();
+            cityNamesSubmitted.put("values",new String[]{cityNameProvided});
+            cityNamesSubmitted.put("searchScore",new Double[]{Double.valueOf(score)});
+            hm.put("cityNamesSubmitted",cityNamesSubmitted);
+            hm.put("bestMatchFound",bestMatchFound);
+            jedisPool.jsonSetWithEscape(keyname, Path2.ROOT_PATH, hm);
+        } else {
+            //System.out.println("\taddMatchToHistory() --> appending JSON object: "+keyname);
+            Pipeline pipeline = jedisPool.pipelined();
+            pipeline.jsonArrAppendWithEscape(keyname, Path2.of("$.cityNamesSubmitted.values"), cityNameProvided);
+            pipeline.jsonArrAppend(keyname, Path2.of("$.cityNamesSubmitted.searchScore"), Double.valueOf(score));
+            pipeline.sync();
+        }
     }
 
     static String jsonifySearchResultRecord(String searchResultRecord){

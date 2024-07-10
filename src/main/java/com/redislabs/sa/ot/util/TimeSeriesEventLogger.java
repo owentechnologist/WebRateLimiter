@@ -40,7 +40,7 @@ public class TimeSeriesEventLogger {
             map.put("customlabel", customLabel);
         }
         if(!jedis.exists(tsKeyName)) {
-            jedis.tsCreate(tsKeyName, TSCreateParams.createParams().labels(map).retention(86400000l));
+            jedis.tsCreate(tsKeyName, TSCreateParams.createParams().labels(map).retention(((86400000l)*30)));//30 days retention
         }else{
             System.out.println("\t[debug] initTS() printing last recorded entry from "+tsKeyName+"  --> "+jedis.tsGet(tsKeyName));
         }
@@ -58,6 +58,7 @@ public class TimeSeriesEventLogger {
         return this;
     }
 
+
     public void addEventToMyTSKey(double val){
         if((!isReadyForEvents)&&(!jedis.exists(tsKeyName))){
             initTS();
@@ -65,6 +66,11 @@ public class TimeSeriesEventLogger {
         try {
             jedis.tsAdd(tsKeyName, val);
         }catch(redis.clients.jedis.exceptions.JedisConnectionException jce){
+            // the Thread sleep below is included solely to produce more
+            // interesting heartbeat variance across the services
+            // there is no functional or system-related need to sleep
+            try{ Thread.sleep((System.nanoTime()%10)*(12000));}
+            catch(InterruptedException ie){ /*do nothing*/}
             jedis = new JedisPooledGetter(Main.startupArgs).getJedisPooled();
         }
     }
