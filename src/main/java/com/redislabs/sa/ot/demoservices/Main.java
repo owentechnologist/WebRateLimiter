@@ -60,7 +60,7 @@ public class Main {
         }else{
             Main.goFast();
         }
-        System.out.println("Kicked Off Webserver listening on port 4567");
+        System.out.println("Kicked Off Webserver listening on port "+WebRateLimitService.getInstance().weblistenerPort);
         System.out.println("To test your rate limiting ... use http://[host]:4567?accountKey=[yourKey]");
         System.out.println("Example ...  http://127.0.0.1:"+WebRateLimitService.getInstance().weblistenerPort+"?accountKey=007");
         System.out.println("Example2 ...  http://192.168.1.59:"+WebRateLimitService.getInstance().weblistenerPort+"?accountKey=007");
