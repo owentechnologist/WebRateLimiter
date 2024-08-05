@@ -1,25 +1,29 @@
 package com.redislabs.sa.ot.city.dedup;
 
+import com.redislabs.sa.ot.demoservices.SharedConstants;
+import com.redislabs.sa.ot.util.JedisPooledGetter;
 import com.redislabs.sa.ot.util.RedisStreamAdapter;
 import com.redislabs.sa.ot.util.StreamEventMapProcessor;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
+import redis.clients.jedis.JedisPooled;
 import redis.clients.jedis.StreamEntryID;
 import redis.clients.jedis.resps.StreamEntry;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.redislabs.sa.ot.demoservices.Main.jedisPool;
+import static com.redislabs.sa.ot.city.dedup.DedupMain.jedisPooled;
 import static com.redislabs.sa.ot.demoservices.SharedConstants.*;
 
 public class DedupMain {
 
-    static RedisStreamAdapter redisStreamAdapter = new RedisStreamAdapter(GARBAGE_CITY_STREAM_NAME,jedisPool);
+    static JedisPooled jedisPooled = new JedisPooledGetter(STARTUPARGS).getJedisPooled();
+    static RedisStreamAdapter redisStreamAdapter = new RedisStreamAdapter(GARBAGE_CITY_STREAM_NAME, jedisPooled);
     static String cfIndexName = "CF_BAD_SPELLING_SUBMISSIONS";
     static CityNameDeduper cityNameDeduper = new CityNameDeduper();
 
     public static void main(String [] args){
-        TimeSeriesHeartBeatEmitter heartBeatEmitter = new TimeSeriesHeartBeatEmitter(jedisPool, DedupMain.class.getCanonicalName());
+        TimeSeriesHeartBeatEmitter heartBeatEmitter = new TimeSeriesHeartBeatEmitter(jedisPooled, DedupMain.class.getCanonicalName());
         System.out.println("Starting deduper...");
         //cityNameDeduper.cleanupCF();  We want to retain the deduping info between executions
         cityNameDeduper.createCF(); // this only has an effect if the filter does not exist
@@ -31,13 +35,13 @@ class CityNameDeduper implements StreamEventMapProcessor {
 
     static void cleanupCF(){
         try{
-            jedisPool.del(DedupMain.cfIndexName);
+            jedisPooled.del(DedupMain.cfIndexName);
         }catch(Throwable t){t.printStackTrace();}
     }
 
     static void createCF(){
-        if (!jedisPool.exists(DedupMain.cfIndexName)) {
-            jedisPool.cfReserve(DedupMain.cfIndexName, 100000);
+        if (!jedisPooled.exists(DedupMain.cfIndexName)) {
+            jedisPooled.cfReserve(DedupMain.cfIndexName, 100000);
         }
     }
 
@@ -74,16 +78,16 @@ class CityNameDeduper implements StreamEventMapProcessor {
         // DedupMain.cfClient.cfAddNx("CF:dedupFilter","entry:"+x+""+y);
         boolean shouldAdd = true;
         try {
-            if(jedisPool.cfExists(DedupMain.cfIndexName,cityName)){
+            if(jedisPooled.cfExists(DedupMain.cfIndexName,cityName)){
                 shouldAdd=false;
             }else{
-                jedisPool.cfAdd(DedupMain.cfIndexName,cityName);
+                jedisPooled.cfAdd(DedupMain.cfIndexName,cityName);
             }
         }catch(Throwable t){
             t.printStackTrace();
             shouldAdd=false;
         }
-        System.out.println("CityNameDeduper.processMap().shouldAdd("+cityName+")"+ jedisPool + "  --> "+shouldAdd);
+        System.out.println("CityNameDeduper.processMap().shouldAdd("+cityName+")"+ jedisPooled + "  --> "+shouldAdd);
         return shouldAdd;
     }
 
@@ -101,7 +105,7 @@ class CityNameDeduper implements StreamEventMapProcessor {
             Map<String, String> data = content.getFields();
             data.put("OriginalTimeStamp", "" + origTimeStamp);
             StreamEntryID streamEntryID = StreamEntryID.NEW_ENTRY;
-            jedisPool.xadd(dedupedCityNameRequests,streamEntryID, data);
+            jedisPooled.xadd(dedupedCityNameRequests,streamEntryID, data);
         }
     }
 }

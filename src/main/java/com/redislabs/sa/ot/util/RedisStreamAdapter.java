@@ -1,6 +1,5 @@
 package com.redislabs.sa.ot.util;
 
-import com.redislabs.sa.ot.demoservices.Main;
 import redis.clients.jedis.JedisPooled;
 import redis.clients.jedis.StreamEntryID;
 import redis.clients.jedis.params.XReadGroupParams;
@@ -14,6 +13,8 @@ import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+
+import static com.redislabs.sa.ot.demoservices.SharedConstants.STARTUPARGS;
 
 public class RedisStreamAdapter {
 
@@ -105,7 +106,7 @@ public class RedisStreamAdapter {
                                 while(unhealthy){
                                     // the Thread sleep below enforces a fixed 3 second pause between attempts:
                                     try{ Thread.sleep(3000);}catch(InterruptedException ie){ /*do nothing*/}
-                                    jedisPooled = new JedisPooledGetter(Main.startupArgs).getJedisPooled();
+                                    jedisPooled = new JedisPooledGetter(STARTUPARGS).getJedisPooled();
                                     if(jedisPooled.ping().equalsIgnoreCase("pong")){
                                         unhealthy=false;
                                     }

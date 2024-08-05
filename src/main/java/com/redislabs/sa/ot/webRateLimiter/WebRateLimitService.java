@@ -3,7 +3,6 @@ import static com.redislabs.sa.ot.demoservices.Main.jedisPool;
 import static com.redislabs.sa.ot.demoservices.SharedConstants.*;
 import static spark.Spark.*;
 
-import com.redislabs.sa.ot.demoservices.Main;
 import com.redislabs.sa.ot.demoservices.SharedConstants;
 import com.redislabs.sa.ot.util.TimeSeriesHeartBeatEmitter;
 import com.redislabs.sa.ot.util.TopkHelper;
@@ -43,7 +42,7 @@ public class WebRateLimitService {
             setTopKSize(10).
             setTopKKeyNameForMyLog("TOPK:WRL:TOP_TEN_BUSIEST_ACCOUNTS");
 
-    private static WebRateLimitService instance =  new WebRateLimitService();
+    private static final WebRateLimitService instance =  new WebRateLimitService();
     public static WebRateLimitService getInstance(){ return instance; }
 
     private WebRateLimitService() {
@@ -64,7 +63,7 @@ public class WebRateLimitService {
     }
 
     private static void assignPort(){
-        ArrayList<String> arrayListArgs = new ArrayList<String>(Arrays.asList(Main.startupArgs));
+        ArrayList<String> arrayListArgs = new ArrayList<String>(Arrays.asList(STARTUPARGS));
         if(arrayListArgs.contains(SharedConstants.WEB_LISTENER_PORT)){
             String listenPort =
               arrayListArgs.get(1+(arrayListArgs.indexOf(SharedConstants.WEB_LISTENER_PORT)));
@@ -286,6 +285,9 @@ public class WebRateLimitService {
 
     private RateLimitRecord buildRateLimitRecord(String requestMethod,String requestIP, String accountID){
         String rateLimitKey= "z:rateLimiting:"+requestIP+":"+requestMethod+":"+accountID;
+        if(accountID.startsWith("accountKey%3")){
+            System.out.println("accountID startsWith: accountKey%3\nmaybe clean??????");
+        }
         return new RateLimitRecord(rateLimitKey);
     }
 
@@ -322,7 +324,8 @@ public class WebRateLimitService {
         topkCityNameHelper.addEntryToMyTopKKey(city);
         if(jedisPool.exists(requestKey)) {
             jedisPool.del(requestKey); // only one request / key allowed!
-            jedisPool.set("gbg:submissions:slidingyear:"+city,city,new SetParams().ex(31536000));
+            //Unnecessary capture of all submissions again as Strings:
+            //jedisPool.set("gbg:submissions:slidingyear:"+city,city,new SetParams().ex(31536000));
             Map<String,String> citySubmission= new HashMap<String,String>();
             citySubmission.put("spellCheckMe",city);
             citySubmission.put("requestID",requestKey);

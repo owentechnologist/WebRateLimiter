@@ -10,6 +10,8 @@ import redis.clients.jedis.JedisPooled;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import static com.redislabs.sa.ot.demoservices.SharedConstants.STARTUPARGS;
+
 /**
  *
  * This application uses several features of Redis and Redis Modules:
@@ -49,10 +51,9 @@ import java.util.Arrays;
  */
 public class Main {
     public static JedisPooled jedisPool = null;
-    public static String[] startupArgs;
     public static void main(String[] args){
-        startupArgs=args;
-        JedisPooledGetter jedisPooledGetter = new JedisPooledGetter(startupArgs);
+        STARTUPARGS =args;
+        JedisPooledGetter jedisPooledGetter = new JedisPooledGetter(STARTUPARGS);
         jedisPool=jedisPooledGetter.getJedisPooled();
         ArrayList<String> arrayListArgs = new ArrayList<String>(Arrays.asList(args));
         if(arrayListArgs.contains("goslow")){
@@ -71,7 +72,9 @@ public class Main {
         try{
             System.out.println("\n Main.xtrimUnneededStreamHistory() called...");
             jedisPool.xtrim(SharedConstants.dedupedCityNameRequests,0,false);
-            jedisPool.xtrim(SharedConstants.GARBAGE_CITY_STREAM_NAME,0,false);
+            //Trimming the GARBAGE stream disallows any correction when one of the services fails
+            // ConsumerGroups should really be used for all stream interactions...
+            // jedisPool.xtrim(SharedConstants.GARBAGE_CITY_STREAM_NAME,0,false);
             System.out.println("Main.xtrimUnneededStreamHistory() completed...");
         }catch(Throwable t){}
     }

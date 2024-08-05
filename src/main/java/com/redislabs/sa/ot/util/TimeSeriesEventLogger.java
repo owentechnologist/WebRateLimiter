@@ -1,11 +1,13 @@
 package com.redislabs.sa.ot.util;
 
-import com.redislabs.sa.ot.demoservices.Main;
 import redis.clients.jedis.JedisPooled;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 import redis.clients.jedis.timeseries.TSCreateParams;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.redislabs.sa.ot.demoservices.SharedConstants.STARTUPARGS;
 
 /*
 This implementation offers a 'shared label' by which many keys can be queried together
@@ -14,7 +16,7 @@ You may wish to add additional custom labels - to express more variance in the s
  */
 public class TimeSeriesEventLogger {
 
-    JedisPooled jedis = null;
+    JedisPooled jedisPooled = new JedisPooledGetter(STARTUPARGS).getJedisPooled();
     String tsKeyName = null;
     String customLabel = null; //countingTokensUsed,durationInMilliseconds
     String sharedLabel = "groupLabel"; // just a default - feel free to override
@@ -31,7 +33,7 @@ public class TimeSeriesEventLogger {
 
     //call this method after assigning a JedisPool object and the keyName to this instance
     public TimeSeriesEventLogger initTS(){
-        if((null==tsKeyName)||(null==jedis)){
+        if((null==tsKeyName)||(null==jedisPooled)){
             throw new RuntimeException("Must setJedis() and the TimeSeriesEventLogger.setTSKeyNameForMyLog()!");
         }
         Map<String,String> map = new HashMap<>();
@@ -39,17 +41,28 @@ public class TimeSeriesEventLogger {
         if(null!=customLabel) {
             map.put("customlabel", customLabel);
         }
-        if(!jedis.exists(tsKeyName)) {
-            jedis.tsCreate(tsKeyName, TSCreateParams.createParams().labels(map).retention(((86400000l)*30)));//30 days retention
+        try{
+            jedisPooled.ping();
+        }catch(Throwable jce){
+            jedisPooled = new JedisPooledGetter(STARTUPARGS).getJedisPooled();
+        }
+        if(!jedisPooled.exists(tsKeyName)) {
+            jedisPooled.tsCreate(tsKeyName, TSCreateParams.createParams().labels(map).retention(((86400000l)*30)));//30 days retention
         }else{
-            System.out.println("\t[debug] initTS() printing last recorded entry from "+tsKeyName+"  --> "+jedis.tsGet(tsKeyName));
+            System.out.println("\t[debug] initTS() printing last recorded entry from "+tsKeyName+"  --> "+jedisPooled.tsGet(tsKeyName));
         }
         isReadyForEvents=true;
         return this;
     }
 
     public TimeSeriesEventLogger setJedis(JedisPooled jedis){
-        this.jedis=jedis;
+        try{
+            if(!(this.jedisPooled.ping().equalsIgnoreCase("pong"))) {
+                this.jedisPooled = jedis;
+            }
+        }catch(JedisConnectionException jce){
+            this.jedisPooled = new JedisPooledGetter(STARTUPARGS).getJedisPooled();
+        }
         return this;
     }
 
@@ -60,18 +73,18 @@ public class TimeSeriesEventLogger {
 
 
     public void addEventToMyTSKey(double val){
-        if((!isReadyForEvents)&&(!jedis.exists(tsKeyName))){
+        if((!isReadyForEvents)&&(!jedisPooled.exists(tsKeyName))){
             initTS();
         }
         try {
-            jedis.tsAdd(tsKeyName, val);
+            jedisPooled.tsAdd(tsKeyName, val);
         }catch(redis.clients.jedis.exceptions.JedisConnectionException jce){
             // the Thread sleep below is included solely to produce more
             // interesting heartbeat variance across the services
             // there is no functional or system-related need to sleep
             try{ Thread.sleep((System.nanoTime()%10)*(12000));}
             catch(InterruptedException ie){ /*do nothing*/}
-            jedis = new JedisPooledGetter(Main.startupArgs).getJedisPooled();
+            jedisPooled = new JedisPooledGetter(STARTUPARGS).getJedisPooled();
         }
     }
 }

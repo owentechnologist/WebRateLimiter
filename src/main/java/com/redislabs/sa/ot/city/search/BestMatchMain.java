@@ -11,6 +11,7 @@ import redis.clients.jedis.json.Path2;
 import redis.clients.jedis.search.Query;
 import redis.clients.jedis.search.SearchResult;
 import redis.clients.jedis.resps.StreamEntry;
+import redis.clients.jedis.search.querybuilder.QueryBuilders;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,7 +61,7 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
         String bestMatch="No Match Found";
         String score = "";
         try {
-            Query query = new Query(cityName).
+            Query query = new Query("@city:("+cityName+")").
                     setSortBy("name_length",true).
                     returnFields("city").limit(0,1).
                     setWithScores();
@@ -86,8 +87,8 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
                 }
             }
             if (!shouldAdd){
-                query = new Query("%%"+cityName+"%%").
-                        setSortBy("name_length",true).
+                query = new Query("@city:(%%"+cityName+"%%)").
+                        //setSortBy("name_length",true).
                         returnFields("city").limit(0,1).
                         setWithScores();
                 result = jedisPool.ftSearch(SharedConstants.citySearchIndex,query);
@@ -119,7 +120,7 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
     // see the same cityNameProvided show up more than one time
     // if we do, there has been an unwanted collision
     private void addMatchToHistory(String cityNameProvided, String bestMatchFound, String score) {
-        System.out.println("\taddMatchToHistory() --> start");
+        System.out.println("\taddMatchToHistory() --> start args("+cityNameProvided+", "+bestMatchFound+", "+score);
         //Map<String, String> values = new HashMap<String, String>();
         String keyname = "history:citynames:gbg_submitted:" + bestMatchFound;
         //values.put(cityNameProvided, score);
@@ -128,6 +129,9 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
             Map<String, Object> hm = new HashMap<>();
             Map<String, Object> cityNamesSubmitted = new HashMap<>();
             cityNamesSubmitted.put("values",new String[]{cityNameProvided});
+            if("".equals(score)){
+                score="0.0";
+            }
             cityNamesSubmitted.put("searchScore",new Double[]{Double.valueOf(score)});
             hm.put("cityNamesSubmitted",cityNamesSubmitted);
             hm.put("bestMatchFound",bestMatchFound);
@@ -136,6 +140,10 @@ class CityNameLookupMatcher implements StreamEventMapProcessor {
             //System.out.println("\taddMatchToHistory() --> appending JSON object: "+keyname);
             Pipeline pipeline = jedisPool.pipelined();
             pipeline.jsonArrAppendWithEscape(keyname, Path2.of("$.cityNamesSubmitted.values"), cityNameProvided);
+            //check to ensure we have a valid score returned from effort to search for match:
+            try{Double.valueOf(score);}catch(java.lang.NumberFormatException nfe){
+                score="0.0";
+            }
             pipeline.jsonArrAppend(keyname, Path2.of("$.cityNamesSubmitted.searchScore"), Double.valueOf(score));
             pipeline.sync();
         }
