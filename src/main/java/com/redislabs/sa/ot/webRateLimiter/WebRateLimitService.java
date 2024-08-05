@@ -92,7 +92,13 @@ public class WebRateLimitService {
             String requestIP = request.ip();
             String queryString = request.queryString();
             RateLimitRecord record = instance.buildRateLimitRecord(requestMethod, requestIP, queryString);
-            instance.topkAcctIDHelper.addEntryToMyTopKKey(record.getAccountIDString());
+            String acctIDForTopK = record.getAccountIDString();
+            if(acctIDForTopK.contains("accountKey")){
+                System.out.println("accountID contains: accountKey= cleaning up for topK");
+                acctIDForTopK=acctIDForTopK.split("%3")[1];
+            }
+            System.out.println("\t\t<****> \nAbout to add accountID to topK key "+acctIDForTopK);
+            instance.topkAcctIDHelper.addEntryToMyTopKKey(acctIDForTopK);
             if(!queryString.contains("uniqueRequestKey")) {
                 System.out.println("Before() called... Query String: " + queryString);
                 if (queryString.contains("accountKey")) {
@@ -285,9 +291,6 @@ public class WebRateLimitService {
 
     private RateLimitRecord buildRateLimitRecord(String requestMethod,String requestIP, String accountID){
         String rateLimitKey= "z:rateLimiting:"+requestIP+":"+requestMethod+":"+accountID;
-        if(accountID.startsWith("accountKey%3")){
-            System.out.println("accountID startsWith: accountKey%3\nmaybe clean??????");
-        }
         return new RateLimitRecord(rateLimitKey);
     }
 
