@@ -68,7 +68,7 @@ public class DataSearchBootstrapMain {
         return isNoDupe;
     }
 
-    static void loadCitiesAsHashes(){
+    public static void loadCitiesAsHashes(){
         long indexSize=0;
         try {
             indexSize = jedisPool.ftSearch(citySearchIndex, "*").getTotalResults();
@@ -96,7 +96,7 @@ public class DataSearchBootstrapMain {
         System.out.println("********** \nCities loaded\n**********");
     }
 
-    static void createCitySearchIndex(){
+    public static void createCitySearchIndex(){
         Schema sc = new Schema()
                 .addField(new Schema.TextField("city", 5.0, false, false, false, "dm:en"))
                 .addTextField("state_or_province", 1.0)

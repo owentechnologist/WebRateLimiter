@@ -56,6 +56,13 @@ public class Main {
         JedisPooledGetter jedisPooledGetter = new JedisPooledGetter(STARTUPARGS);
         jedisPool=jedisPooledGetter.getJedisPooled();
         ArrayList<String> arrayListArgs = new ArrayList<String>(Arrays.asList(args));
+        if(arrayListArgs.contains("loadonly")){
+            System.out.println("Data Load Only Mode... STARTING ONLY THE DATA LOAD SERVICE TO LOAD HASHES AND CREATE THE SEARCH INDEX... ");
+            DataSearchBootstrapMain.loadCitiesAsHashes();
+            DataSearchBootstrapMain.createCitySearchIndex();
+            System.out.println("Data Load Only Mode... COMPLETE exiting after load completes");
+            System.exit(0);
+        }        
         if(arrayListArgs.contains("goslow")){
             Main.goSlow();
         }else{

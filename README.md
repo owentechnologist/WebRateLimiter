@@ -105,6 +105,12 @@ mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="-h <redisho
 ```
 (you will have to wait 2 + minutes for the full launch in this case)
 
+* To ONLY load the city data and the search index: IDX_cities you can execute:
+
+``` 
+mvn compile exec:java -Dexec.cleanupDaemonThreads=false -Dexec.args="-h <redishost> -p <redisport> -s <redispass> loadonly"
+```
+
 ---
 
 ### Additional Keys/commands to look into using RedisInsights:
